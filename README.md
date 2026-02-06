@@ -1,115 +1,64 @@
-Here's the updated README.md with the comprehensive `uvx` configuration information:
-
-```markdown
 # MCP Cursor Profiles Server
 
 An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles across different platforms.
 
 ## Features
 
-- 🔄 Switch between Cursor profiles seamlessly
-- 📝 Create new profiles from current configuration
-- 🏷️ Rename existing profiles
-- 📋 List all available profiles
-- 🖥️ Cross-platform support (macOS, Windows, Linux)
-- 🔒 Safety checks to prevent data corruption
+- Switch between Cursor profiles seamlessly
+- Create new profiles from current configuration
+- Rename existing profiles
+- List all available profiles with active profile indication
+- Cross-platform support (macOS, Windows, Linux)
+- Safety checks to prevent data corruption while Cursor is running
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.10 or higher (required by MCP package)
+- Python 3.10 or higher
 - Cursor IDE installed
 - An MCP-compatible client (Claude Desktop, Cursor, etc.)
 - [uv](https://github.com/astral-sh/uv) package manager (recommended)
 
-### Method 1: Using uv (Recommended)
+### Using uv (Recommended)
 
 ```bash
-# Clone or download this repository
 cd mcp-cursor-profiles
-
-# Create virtual environment and install dependencies
 uv sync
 ```
 
-### Method 2: Using pip
+### Using pip
 
 ```bash
-# Clone or download this repository
 cd mcp-cursor-profiles
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
 ## Configuration
 
-### Option 1: Local Installation with Virtual Environment (Recommended for Development)
+### Option 1: Local Virtual Environment (Recommended for Development)
 
-After running `uv sync`, use the Python path from your virtual environment in your MCP client configuration:
+After running `uv sync`, use the Python path from your virtual environment:
 
-**Cursor MCP Configuration:**
 ```json
 {
   "mcpServers": {
     "cursor-profiles": {
-      "command": "/full/path/to/your/project/.venv/bin/python",
+      "command": "/full/path/to/mcp-cursor-profiles/.venv/bin/python",
       "args": ["-m", "cursor_profiles_mcp"]
     }
   }
 }
 ```
 
-**Claude Desktop Configuration:**
-```json
-{
-  "mcpServers": {
-    "cursor-profiles": {
-      "command": "/full/path/to/your/project/.venv/bin/python",
-      "args": ["-m", "cursor_profiles_mcp"]
-    }
-  }
-}
-```
+### Option 2: Install with uvx (Recommended for Distribution)
 
-### Option 2: Package and Install with uvx (Recommended for Distribution)
-
-To make your server available via `uvx`:
-
-1. **Ensure proper packaging configuration** in `pyproject.toml`:
-
-```toml
-[build-system]
-requires = ["hatchling", "setuptools"]
-build-backend = "hatchling.build"
-
-[project]
-name = "mcp-cursor-profiles"
-version = "1.0.0"
-description = "MCP server for managing Cursor profiles"
-authors = [
-    { name = "Your Name", email = "your.email@example.com" },
-]
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "mcp>=1.0.0",
-]
-
-[project.scripts]
-cursor-profiles-mcp = "cursor_profiles_mcp:main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["."]
-```
-
-2. **Install in development mode**:
 ```bash
 uv tool install -e .
 ```
 
-3. **Configure MCP client**:
+Then configure:
+
 ```json
 {
   "mcpServers": {
@@ -121,30 +70,28 @@ uv tool install -e .
 }
 ```
 
-### Option 3: Direct uvx Run
-
-Run directly with `uvx` without installation:
+### Option 3: Direct uv Run
 
 ```json
 {
   "mcpServers": {
     "cursor-profiles": {
       "command": "uv",
-      "args": ["run", "--directory", "/full/path/to/your/project", "cursor_profiles_mcp.py"]
+      "args": ["run", "--directory", "/full/path/to/mcp-cursor-profiles", "cursor_profiles_mcp.py"]
     }
   }
 }
 ```
 
-### Option 4: Use Entry Point Directly
+### Option 4: Entry Point Directly
 
-After running `uv sync`, use the installed script directly:
+After `uv sync`, use the installed console script:
 
 ```json
 {
   "mcpServers": {
     "cursor-profiles": {
-      "command": "/full/path/to/your/project/.venv/bin/cursor-profiles-mcp"
+      "command": "/full/path/to/mcp-cursor-profiles/.venv/bin/cursor-profiles-mcp"
     }
   }
 }
@@ -152,153 +99,112 @@ After running `uv sync`, use the installed script directly:
 
 ## Finding the Correct Paths
 
-### Get your project path:
 ```bash
+# Get your project path
 pwd
-```
 
-### Get Python path in your virtual environment:
-```bash
+# Get Python path in your virtual environment
 source .venv/bin/activate
 which python
-```
-
-This should give you something like:
-`/Users/yourusername/.mcp/mcp-cursor-profiles/.venv/bin/python`
-
-## Recommended Approaches
-
-- **For development**: Use **Option 1** (local virtual environment)
-- **For production/distribution**: Use **Option 2** (uvx installation)
-
-Example development configuration:
-```json
-{
-  "mcpServers": {
-    "cursor-profiles": {
-      "command": "/Users/yourusername/.mcp/mcp-cursor-profiles/.venv/bin/python",
-      "args": ["-m", "cursor_profiles_mcp"]
-    }
-  }
-}
 ```
 
 ## Available Tools
 
 ### `list_profiles`
-List all available Cursor profiles with the active profile marked with an asterisk (*).
 
-**Example:**
-`list_profiles()`
+List all available Cursor profiles. The active profile is marked with an asterisk (`*`).
 
 ### `switch_profile`
+
 Switch to a specific profile and open Cursor.
 
-**Parameters:**
-- `profile_name` (string): Name of the profile to switch to
-
-**Example:**
-`switch_profile("work")`
+| Parameter      | Type   | Description                       |
+| -------------- | ------ | --------------------------------- |
+| `profile_name` | string | Name of the profile to switch to  |
 
 ### `init_profile`
+
 Create a new profile from your current Cursor configuration.
 
-**Parameters:**
-- `profile_name` (string): Name for the new profile
-
-**Example:**
-`init_profile("personal")`
+| Parameter      | Type   | Description              |
+| -------------- | ------ | ------------------------ |
+| `profile_name` | string | Name for the new profile |
 
 ### `rename_profile`
+
 Rename an existing profile.
 
-**Parameters:**
-- `old_name` (string): Current profile name
-- `new_name` (string): New profile name
-
-**Example:**
-`rename_profile("old", "new")`
+| Parameter  | Type   | Description          |
+| ---------- | ------ | -------------------- |
+| `old_name` | string | Current profile name |
+| `new_name` | string | New profile name     |
 
 ### `open_cursor`
-Open the Cursor application with the current profile.
 
-**Example:**
-`open_cursor()`
+Open the Cursor application with the current profile.
 
 ## Platform Support
 
-- **macOS**: Uses `~/Library/Application Support/Cursor` paths
-- **Windows**: Uses `%APPDATA%/Cursor` paths
-- **Linux**: Uses `~/.config/Cursor` paths
+| Platform  | Cursor Config Path                     |
+| --------- | -------------------------------------- |
+| macOS     | `~/Library/Application Support/Cursor` |
+| Windows   | `%APPDATA%/Cursor`                     |
+| Linux     | `~/.config/Cursor`                     |
 
 ## How It Works
 
-The server manages Cursor profiles by:
-1. Creating symlinks from the main Cursor directories to profile-specific directories
-2. Maintaining two sets of profiles (Application Support and dotfile versions)
-3. Ensuring Cursor is closed before profile operations to prevent data corruption
-4. Automatically detecting the correct paths for your operating system
+1. Creates symlinks from the main Cursor directories to profile-specific directories
+2. Maintains two sets of profiles (Application Support and dotfile versions)
+3. Ensures Cursor is closed before profile operations to prevent data corruption
+4. Automatically detects the correct paths for your operating system
 
 ## Safety Features
 
-- ✅ Checks if Cursor is running before profile operations
-- ✅ Validates profile existence before switching
-- ✅ Prevents overwriting existing profiles
-- ✅ Maintains symlink integrity
+- Checks if Cursor is running before profile operations
+- Validates profile names (alphanumeric, hyphens, underscores, dots)
+- Validates profile existence before switching
+- Prevents overwriting existing profiles
+- Maintains symlink integrity
 
 ## Troubleshooting
 
 ### "Cursor is currently running" error
+
 Quit Cursor completely before using profile management tools.
 
 ### "Profile not found" error
-Ensure the profile exists using `list_profiles()`.
+
+Ensure the profile exists using `list_profiles`.
 
 ### Permission errors
+
 Make sure the script has read/write access to Cursor directories.
 
 ### MCP connection issues
+
 - Verify the full path to the Python script in your configuration
 - Ensure Python is in your system PATH
 - Check that all dependencies are installed
 - For uvx issues, ensure the package is properly installed with `uv tool install -e .`
 
 ### Python version issues
-This package requires Python 3.10+. Check your Python version:
+
+This package requires Python 3.10+. Check your version:
+
 ```bash
 python --version
 ```
 
 ## Development
 
-### Running directly
 ```bash
+# Run directly
 python cursor_profiles_mcp.py
+
+# Debug mode
+MCP_DEBUG=1 python cursor_profiles_mcp.py
 ```
-
-### Debugging
-Set environment variable `MCP_DEBUG=1` for debug output.
-
-### Testing MCP connection
-You can test your MCP server configuration by running it directly and checking for any startup errors.
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
-```
-
-## Key Updates Made:
-
-1. **Updated Python requirement** from 3.8 to 3.10+ throughout the document
-2. **Added comprehensive uvx configuration section** with 4 different options
-3. **Included specific instructions** for finding correct paths
-4. **Added recommended approaches** for different use cases (development vs production)
-5. **Enhanced troubleshooting section** with uvx-specific issues
-6. **Improved organization** with clear section headers and better flow
-7. **Added practical examples** with realistic paths and configurations
-
-This updated README now provides comprehensive guidance for both development setup and distribution using `uvx`, making it much easier for users to configure the MCP server in their Cursor or Claude Desktop applications.

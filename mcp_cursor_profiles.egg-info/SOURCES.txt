@@ -1,9 +1,0 @@
-README.md
-cursor_profiles_mcp.py
-pyproject.toml
-mcp_cursor_profiles.egg-info/PKG-INFO
-mcp_cursor_profiles.egg-info/SOURCES.txt
-mcp_cursor_profiles.egg-info/dependency_links.txt
-mcp_cursor_profiles.egg-info/entry_points.txt
-mcp_cursor_profiles.egg-info/requires.txt
-mcp_cursor_profiles.egg-info/top_level.txt

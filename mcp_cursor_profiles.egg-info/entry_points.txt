@@ -1,2 +1,0 @@
-[console_scripts]
-cursor-profiles-mcp = cursor_profiles_mcp:main

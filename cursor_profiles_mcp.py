@@ -306,6 +306,239 @@ async def open_cursor() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Git auth helpers
+# ---------------------------------------------------------------------------
+
+# Matches GitHub HTTPS remotes:  https://github.com/OWNER/REPO  or
+#                                https://USER@github.com/OWNER/REPO
+_GITHUB_HTTPS_RE = re.compile(
+    r"https://(?:(?P<user>[^@/]+)@)?github\.com/(?P<owner>[^/]+)/(?P<repo>[^/.]+?)(?:\.git)?$"
+)
+# Matches GitHub SSH remotes:    git@github.com:OWNER/REPO.git
+_GITHUB_SSH_RE = re.compile(
+    r"git@github\.com:(?P<owner>[^/]+)/(?P<repo>[^/.]+?)(?:\.git)?$"
+)
+
+
+async def _run_cmd(*args: str) -> tuple[int, str, str]:
+    """Run a command and return (returncode, stdout, stderr)."""
+    proc = await asyncio.create_subprocess_exec(
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    return proc.returncode or 0, stdout.decode().strip(), stderr.decode().strip()
+
+
+def _parse_github_remote(url: str) -> dict[str, str | None] | None:
+    """Extract owner, repo, and embedded username from a GitHub remote URL.
+
+    Returns None if the URL is not a recognised GitHub remote.
+    """
+    m = _GITHUB_HTTPS_RE.match(url) or _GITHUB_SSH_RE.match(url)
+    if not m:
+        return None
+    groups = m.groupdict()
+    return {
+        "owner": groups["owner"],
+        "repo": groups["repo"],
+        "embedded_user": groups.get("user"),  # only present for HTTPS
+    }
+
+
+async def _get_gh_accounts() -> list[dict[str, str | bool]]:
+    """Return a list of ``{username, active}`` dicts from ``gh auth status``."""
+    rc, stdout, stderr = await _run_cmd("gh", "auth", "status")
+    combined = f"{stdout}\n{stderr}"  # gh may write to stderr
+
+    accounts: list[dict[str, str | bool]] = []
+    current_user: str | None = None
+
+    for line in combined.splitlines():
+        # "✓ Logged in to github.com account USERNAME (keyring)"
+        logged_in = re.search(r"Logged in to github\.com account (\S+)", line)
+        if logged_in:
+            current_user = logged_in.group(1)
+            continue
+        # "- Active account: true" / "- Active account: false"
+        active_match = re.search(r"Active account:\s*(true|false)", line)
+        if active_match and current_user:
+            accounts.append({
+                "username": current_user,
+                "active": active_match.group(1) == "true",
+            })
+            current_user = None
+
+    return accounts
+
+
+# ---------------------------------------------------------------------------
+# MCP Tools — Git authentication
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+async def list_git_accounts() -> str:
+    """List all GitHub accounts authenticated via the gh CLI.
+
+    Shows which account is currently active.
+    """
+    accounts = await _get_gh_accounts()
+    if not accounts:
+        return "No GitHub accounts found. Run `gh auth login` to authenticate."
+
+    lines = []
+    for acct in accounts:
+        prefix = "* " if acct["active"] else "  "
+        lines.append(f"{prefix}{acct['username']}")
+
+    return "GitHub accounts (gh CLI):\n" + "\n".join(lines)
+
+
+@mcp.tool()
+async def check_git_auth(repo_path: str) -> str:
+    """Check whether the active gh account matches a repo's GitHub remote.
+
+    Compares the active ``gh`` account to the owner of the ``origin`` remote.
+    Reports a mismatch and suggests how to fix it.
+
+    Args:
+        repo_path: Absolute path to the git repository to check.
+    """
+    repo = Path(repo_path).expanduser().resolve()
+    if not (repo / ".git").exists():
+        raise ValueError(f"'{repo}' is not a git repository (no .git directory).")
+
+    # Get remote URL
+    rc, url, _ = await _run_cmd("git", "-C", str(repo), "remote", "get-url", "origin")
+    if rc != 0 or not url:
+        raise ValueError("No 'origin' remote found in this repository.")
+
+    parsed = _parse_github_remote(url)
+    if parsed is None:
+        return f"Remote URL is not a GitHub URL: {url}\nGit auth check only supports GitHub remotes."
+
+    # Get active gh account
+    accounts = await _get_gh_accounts()
+    active = next((a for a in accounts if a["active"]), None)
+    active_user = active["username"] if active else None
+
+    owner = parsed["owner"]
+    embedded = parsed["embedded_user"]
+
+    lines = [
+        f"Repository:      {repo}",
+        f"Remote URL:      {url}",
+        f"Remote owner:    {owner}",
+        f"Embedded user:   {embedded or '(none)'}",
+        f"Active gh acct:  {active_user or '(none)'}",
+        "",
+    ]
+
+    # Check embedded username in URL
+    has_issues = False
+
+    if not embedded:
+        lines.append(
+            "WARNING: Remote URL has no embedded username. "
+            "Git will use whichever gh account is active, which may be wrong."
+        )
+        lines.append(
+            f"  Fix: run `fix_git_remote` with repo_path='{repo}' to embed the owner in the URL."
+        )
+        has_issues = True
+
+    # Check active account vs owner
+    if active_user and active_user != owner:
+        lines.append(
+            f"MISMATCH: Active gh account '{active_user}' does not match "
+            f"remote owner '{owner}'."
+        )
+        lines.append(
+            f"  Fix: run `switch_git_account` with account='{owner}' to switch."
+        )
+        has_issues = True
+
+    if not active_user:
+        lines.append("WARNING: No active gh account found. Run `gh auth login`.")
+        has_issues = True
+
+    if not has_issues:
+        lines.append("OK: Active gh account matches the remote owner and URL has embedded username.")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def fix_git_remote(repo_path: str, username: str = "") -> str:
+    """Embed the GitHub username in a repo's origin URL for automatic auth.
+
+    When the remote URL includes ``username@github.com``, the ``gh`` credential
+    helper resolves the correct account token automatically — no manual
+    ``gh auth switch`` needed.
+
+    Also runs ``gh auth setup-git`` to ensure the credential helper is configured.
+
+    Args:
+        repo_path: Absolute path to the git repository.
+        username:  GitHub username to embed. Defaults to the remote owner.
+    """
+    repo = Path(repo_path).expanduser().resolve()
+    if not (repo / ".git").exists():
+        raise ValueError(f"'{repo}' is not a git repository (no .git directory).")
+
+    rc, url, _ = await _run_cmd("git", "-C", str(repo), "remote", "get-url", "origin")
+    if rc != 0 or not url:
+        raise ValueError("No 'origin' remote found in this repository.")
+
+    parsed = _parse_github_remote(url)
+    if parsed is None:
+        return f"Remote URL is not a GitHub URL: {url}\nCannot fix non-GitHub remotes."
+
+    target_user = username.strip() or parsed["owner"]
+    new_url = f"https://{target_user}@github.com/{parsed['owner']}/{parsed['repo']}"
+
+    # Update remote URL
+    rc, _, err = await _run_cmd(
+        "git", "-C", str(repo), "remote", "set-url", "origin", new_url,
+    )
+    if rc != 0:
+        raise RuntimeError(f"Failed to update remote URL: {err}")
+
+    # Ensure gh credential helper is configured
+    rc2, _, err2 = await _run_cmd("gh", "auth", "setup-git", "-h", "github.com")
+    setup_note = ""
+    if rc2 != 0:
+        setup_note = f"\nNote: `gh auth setup-git` failed: {err2}"
+
+    return (
+        f"Updated remote 'origin':\n"
+        f"  Old: {url}\n"
+        f"  New: {new_url}\n"
+        f"\nThe gh credential helper will now auto-resolve the '{target_user}' account "
+        f"for this repo.{setup_note}"
+    )
+
+
+@mcp.tool()
+async def switch_git_account(account: str) -> str:
+    """Switch the active GitHub account in the gh CLI.
+
+    Args:
+        account: GitHub username to switch to.
+    """
+    rc, stdout, stderr = await _run_cmd(
+        "gh", "auth", "switch", "-h", "github.com", "-u", account,
+    )
+    if rc != 0:
+        raise RuntimeError(
+            f"Failed to switch to account '{account}': {stderr or stdout}"
+        )
+
+    return f"Switched active gh account to '{account}'."
+
+
+# ---------------------------------------------------------------------------
 # MCP Resources
 # ---------------------------------------------------------------------------
 

@@ -8,6 +8,7 @@ An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles
 - Create new profiles from current configuration
 - Rename existing profiles
 - List all available profiles with active profile indication
+- Git authentication management across multiple GitHub accounts
 - Cross-platform support (macOS, Windows, Linux)
 - Safety checks to prevent data corruption while Cursor is running
 
@@ -19,6 +20,7 @@ An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles
 - Cursor IDE installed
 - An MCP-compatible client (Claude Desktop, Cursor, etc.)
 - [uv](https://github.com/astral-sh/uv) package manager (recommended)
+- [gh](https://cli.github.com/) CLI (required for git auth tools)
 
 ### Using uv (Recommended)
 
@@ -142,6 +144,35 @@ Rename an existing profile.
 ### `open_cursor`
 
 Open the Cursor application with the current profile.
+
+### `list_git_accounts`
+
+List all GitHub accounts authenticated via the `gh` CLI. Shows which account is currently active.
+
+### `check_git_auth`
+
+Check whether the active `gh` account matches a repository's GitHub remote owner. Reports mismatches and suggests fixes.
+
+| Parameter   | Type   | Description                              |
+| ----------- | ------ | ---------------------------------------- |
+| `repo_path` | string | Absolute path to the git repository      |
+
+### `fix_git_remote`
+
+Embed the GitHub username in a repo's `origin` URL so the `gh` credential helper automatically resolves the correct account — no manual `gh auth switch` needed.
+
+| Parameter   | Type   | Description                                           |
+| ----------- | ------ | ----------------------------------------------------- |
+| `repo_path` | string | Absolute path to the git repository                   |
+| `username`  | string | GitHub username to embed (defaults to the repo owner) |
+
+### `switch_git_account`
+
+Switch the active GitHub account in the `gh` CLI.
+
+| Parameter | Type   | Description                     |
+| --------- | ------ | ------------------------------- |
+| `account` | string | GitHub username to switch to    |
 
 ## Platform Support
 

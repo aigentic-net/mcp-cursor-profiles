@@ -33,7 +33,7 @@ uv sync
 
 ```bash
 cd mcp-cursor-profiles
-pip install -r requirements.txt
+pip install .
 ```
 
 ## Configuration

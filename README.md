@@ -21,7 +21,7 @@ An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles
 
 ## Installation & Configuration
 
-Clone the repository, install as a tool, and add the MCP config:
+Clone the repository and install as a tool:
 
 ```bash
 git clone https://github.com/aigentic-net/mcp-cursor-profiles.git
@@ -35,14 +35,21 @@ Then add to your MCP client configuration (Cursor, Claude Desktop, etc.):
 {
   "mcpServers": {
     "cursor-profiles": {
-      "command": "uvx",
-      "args": ["cursor-profiles-mcp"]
+      "command": "cursor-profiles-mcp"
     }
   }
 }
 ```
 
-That's it. The `uvx` command runs the server in an isolated environment with no path management needed.
+`uv tool install` places the `cursor-profiles-mcp` binary on your PATH (at `~/.local/bin/` by default). No `uvx` needed -- `uvx` resolves from PyPI and this package is not published there.
+
+> **Note:** If `~/.local/bin` is not on your PATH, use the full path instead:
+>
+> ```json
+> { "command": "/Users/you/.local/bin/cursor-profiles-mcp" }
+> ```
+>
+> You can find the exact path with `uv tool dir --bin`.
 
 > **Updating:** After pulling new changes, re-run `uv tool install -e .` to pick them up.
 
@@ -157,7 +164,8 @@ Make sure the script has read/write access to Cursor directories.
 
 - Ensure `uv` is installed and on your PATH
 - Re-run `uv tool install -e .` from the project directory
-- Check that `uvx cursor-profiles-mcp` runs without errors
+- Verify the binary runs: `cursor-profiles-mcp` (it should block waiting for input -- that's normal, Ctrl+C to exit)
+- If the command is not found, check that `~/.local/bin` is on your PATH or use the full path from `uv tool dir --bin`
 
 ### Python version issues
 

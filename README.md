@@ -12,54 +12,24 @@ An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles
 - Cross-platform support (macOS, Windows, Linux)
 - Safety checks to prevent data corruption while Cursor is running
 
-## Installation
-
-### Prerequisites
+## Prerequisites
 
 - Python 3.10 or higher
+- [uv](https://github.com/astral-sh/uv) package manager
 - Cursor IDE installed
-- An MCP-compatible client (Claude Desktop, Cursor, etc.)
-- [uv](https://github.com/astral-sh/uv) package manager (recommended)
 - [gh](https://cli.github.com/) CLI (required for git auth tools)
 
-### Using uv (Recommended)
+## Installation & Configuration
+
+Clone the repository, install as a tool, and add the MCP config:
 
 ```bash
+git clone https://github.com/aigentic-net/mcp-cursor-profiles.git
 cd mcp-cursor-profiles
-uv sync
-```
-
-### Using pip
-
-```bash
-cd mcp-cursor-profiles
-pip install .
-```
-
-## Configuration
-
-### Option 1: Local Virtual Environment (Recommended for Development)
-
-After running `uv sync`, use the Python path from your virtual environment:
-
-```json
-{
-  "mcpServers": {
-    "cursor-profiles": {
-      "command": "/full/path/to/mcp-cursor-profiles/.venv/bin/python",
-      "args": ["-m", "cursor_profiles_mcp"]
-    }
-  }
-}
-```
-
-### Option 2: Install with uvx (Recommended for Distribution)
-
-```bash
 uv tool install -e .
 ```
 
-Then configure:
+Then add to your MCP client configuration (Cursor, Claude Desktop, etc.):
 
 ```json
 {
@@ -72,51 +42,19 @@ Then configure:
 }
 ```
 
-### Option 3: Direct uv Run
+That's it. The `uvx` command runs the server in an isolated environment with no path management needed.
 
-```json
-{
-  "mcpServers": {
-    "cursor-profiles": {
-      "command": "uv",
-      "args": ["run", "--directory", "/full/path/to/mcp-cursor-profiles", "cursor_profiles_mcp.py"]
-    }
-  }
-}
-```
-
-### Option 4: Entry Point Directly
-
-After `uv sync`, use the installed console script:
-
-```json
-{
-  "mcpServers": {
-    "cursor-profiles": {
-      "command": "/full/path/to/mcp-cursor-profiles/.venv/bin/cursor-profiles-mcp"
-    }
-  }
-}
-```
-
-## Finding the Correct Paths
-
-```bash
-# Get your project path
-pwd
-
-# Get Python path in your virtual environment
-source .venv/bin/activate
-which python
-```
+> **Updating:** After pulling new changes, re-run `uv tool install -e .` to pick them up.
 
 ## Available Tools
 
-### `list_profiles`
+### Profile Management
+
+#### `list_profiles`
 
 List all available Cursor profiles. The active profile is marked with an asterisk (`*`).
 
-### `switch_profile`
+#### `switch_profile`
 
 Switch to a specific profile and open Cursor.
 
@@ -124,7 +62,7 @@ Switch to a specific profile and open Cursor.
 | -------------- | ------ | --------------------------------- |
 | `profile_name` | string | Name of the profile to switch to  |
 
-### `init_profile`
+#### `init_profile`
 
 Create a new profile from your current Cursor configuration.
 
@@ -132,7 +70,7 @@ Create a new profile from your current Cursor configuration.
 | -------------- | ------ | ------------------------ |
 | `profile_name` | string | Name for the new profile |
 
-### `rename_profile`
+#### `rename_profile`
 
 Rename an existing profile.
 
@@ -141,15 +79,19 @@ Rename an existing profile.
 | `old_name` | string | Current profile name |
 | `new_name` | string | New profile name     |
 
-### `open_cursor`
+#### `open_cursor`
 
 Open the Cursor application with the current profile.
 
-### `list_git_accounts`
+### Git Authentication
+
+These tools manage GitHub authentication across multiple accounts via the `gh` CLI.
+
+#### `list_git_accounts`
 
 List all GitHub accounts authenticated via the `gh` CLI. Shows which account is currently active.
 
-### `check_git_auth`
+#### `check_git_auth`
 
 Check whether the active `gh` account matches a repository's GitHub remote owner. Reports mismatches and suggests fixes.
 
@@ -157,16 +99,16 @@ Check whether the active `gh` account matches a repository's GitHub remote owner
 | ----------- | ------ | ---------------------------------------- |
 | `repo_path` | string | Absolute path to the git repository      |
 
-### `fix_git_remote`
+#### `fix_git_remote`
 
-Embed the GitHub username in a repo's `origin` URL so the `gh` credential helper automatically resolves the correct account — no manual `gh auth switch` needed.
+Embed the GitHub username in a repo's `origin` URL so the `gh` credential helper automatically resolves the correct account -- no manual `gh auth switch` needed.
 
 | Parameter   | Type   | Description                                           |
 | ----------- | ------ | ----------------------------------------------------- |
 | `repo_path` | string | Absolute path to the git repository                   |
 | `username`  | string | GitHub username to embed (defaults to the repo owner) |
 
-### `switch_git_account`
+#### `switch_git_account`
 
 Switch the active GitHub account in the `gh` CLI.
 
@@ -213,10 +155,9 @@ Make sure the script has read/write access to Cursor directories.
 
 ### MCP connection issues
 
-- Verify the full path to the Python script in your configuration
-- Ensure Python is in your system PATH
-- Check that all dependencies are installed
-- For uvx issues, ensure the package is properly installed with `uv tool install -e .`
+- Ensure `uv` is installed and on your PATH
+- Re-run `uv tool install -e .` from the project directory
+- Check that `uvx cursor-profiles-mcp` runs without errors
 
 ### Python version issues
 
@@ -228,12 +169,30 @@ python --version
 
 ## Development
 
+For working on the server itself:
+
 ```bash
+cd mcp-cursor-profiles
+uv sync
+
 # Run directly
-python cursor_profiles_mcp.py
+uv run cursor-profiles-mcp
 
 # Debug mode
-MCP_DEBUG=1 python cursor_profiles_mcp.py
+MCP_DEBUG=1 uv run cursor-profiles-mcp
+```
+
+For development, you can point the MCP config at the venv instead:
+
+```json
+{
+  "mcpServers": {
+    "cursor-profiles": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/mcp-cursor-profiles", "cursor-profiles-mcp"]
+    }
+  }
+}
 ```
 
 ## License

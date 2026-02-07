@@ -6,6 +6,7 @@ import json
 import platform
 import re
 import shutil
+import stat
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -241,11 +242,25 @@ async def init_profile(profile_name: str) -> str:
     return f"Initialized new profile '{profile_name}' and opened Cursor."
 
 
+def _ignore_non_copyable(directory: str, contents: list[str]) -> list[str]:
+    """Return entries that should be skipped by copytree (sockets, pipes, etc.)."""
+    ignored: list[str] = []
+    for name in contents:
+        path = Path(directory) / name
+        try:
+            mode = path.lstat().st_mode
+            if stat.S_ISSOCK(mode) or stat.S_ISFIFO(mode):
+                ignored.append(name)
+        except OSError:
+            pass
+    return ignored
+
+
 def _init_single_dir(source: Path, dest: Path) -> None:
     """Copy or move *source* into *dest* and replace *source* with a symlink."""
     if source.is_symlink():
         resolved = source.resolve()
-        shutil.copytree(resolved, dest)
+        shutil.copytree(resolved, dest, ignore=_ignore_non_copyable)
         source.unlink()
         source.symlink_to(dest)
     elif source.exists():

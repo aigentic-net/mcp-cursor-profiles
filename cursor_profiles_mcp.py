@@ -157,6 +157,79 @@ def _swap_symlink(link_path: Path, target: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# MCP config safety
+# ---------------------------------------------------------------------------
+
+# Minimal MCP config entry that ensures cursor-profiles-mcp is always available.
+_SELF_MCP_ENTRY = {
+    "defer_loading": True,
+    "command": "cursor-profiles-mcp",
+    "transportType": "stdio",
+}
+
+
+def _ensure_mcp_config(profile_dot_dir: Path) -> None:
+    """Ensure *profile_dot_dir* has cursor-profiles-mcp in its mcp.json.
+
+    If mcp.json doesn't exist, creates one with just the cursor-profiles-mcp
+    entry.  If it exists but is missing the entry, injects it.  Existing
+    entries and other servers are never modified.
+    """
+    mcp_json = profile_dot_dir / "mcp.json"
+
+    if mcp_json.exists():
+        try:
+            data = json.loads(mcp_json.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            data = {}
+    else:
+        data = {}
+
+    servers = data.setdefault("mcpServers", {})
+
+    # Check if cursor-profiles-mcp is already configured under any key.
+    already_present = any(
+        srv.get("command") == "cursor-profiles-mcp"
+        for srv in servers.values()
+        if isinstance(srv, dict)
+    )
+
+    if not already_present:
+        servers["cursor_profiles"] = _SELF_MCP_ENTRY
+        mcp_json.write_text(
+            json.dumps(data, indent=2) + "\n", encoding="utf-8"
+        )
+
+
+def _sync_mcp_json_to_all() -> list[str]:
+    """Copy the current profile's mcp.json into every other profile.
+
+    Returns a list of profile names that were updated.
+    """
+    _ensure_profile_roots()
+    source = PATHS["dot_cursor"] / "mcp.json"
+    if not source.exists():
+        raise FileNotFoundError("No mcp.json found in the active profile.")
+
+    content = source.read_text(encoding="utf-8")
+    updated: list[str] = []
+
+    profiles_dir = PATHS["dot_cursor_profiles"]
+    if profiles_dir.exists():
+        for item in sorted(profiles_dir.iterdir()):
+            if not item.is_dir():
+                continue
+            target = item / "mcp.json"
+            # Skip the currently active profile (it's the source).
+            if target.resolve() == source.resolve():
+                continue
+            target.write_text(content, encoding="utf-8")
+            updated.append(item.name)
+
+    return updated
+
+
+# ---------------------------------------------------------------------------
 # MCP Tools
 # ---------------------------------------------------------------------------
 
@@ -207,6 +280,10 @@ async def switch_profile(profile_name: str) -> str:
         raise ValueError(
             f"Profile '{profile_name}' not found in both profile directories."
         )
+
+    # Ensure the target profile has cursor-profiles-mcp configured so
+    # the user can always switch back after Cursor restarts.
+    _ensure_mcp_config(dot_profile_path)
 
     _swap_symlink(PATHS["cursor_dir"], cursor_profile_path)
     _swap_symlink(PATHS["dot_cursor"], dot_profile_path)
@@ -329,6 +406,21 @@ async def open_cursor() -> str:
     """Open the Cursor application with the current profile."""
     await _open_cursor()
     return "Opened Cursor application."
+
+
+@mcp.tool()
+async def sync_mcp_config() -> str:
+    """Copy the current profile's MCP config (mcp.json) to all other profiles.
+
+    This ensures every profile has the same MCP servers available,
+    so you can always switch between profiles without losing access
+    to cursor-profiles-mcp or any other MCP server.
+    """
+    updated = _sync_mcp_json_to_all()
+    if not updated:
+        return "No other profiles to sync to."
+    names = ", ".join(updated)
+    return f"Synced mcp.json to {len(updated)} profile(s): {names}"
 
 
 # ---------------------------------------------------------------------------

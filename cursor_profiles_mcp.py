@@ -160,8 +160,8 @@ def _swap_symlink(link_path: Path, target: Path) -> None:
 # MCP Tools
 # ---------------------------------------------------------------------------
 
-@mcp.tool()
-async def list_profiles() -> str:
+@mcp.tool(name="show_profiles")
+async def get_profiles() -> str:
     """List all available Cursor profiles.
 
     The active profile is marked with an asterisk (*).
@@ -257,13 +257,24 @@ def _ignore_non_copyable(directory: str, contents: list[str]) -> list[str]:
 
 
 def _init_single_dir(source: Path, dest: Path) -> None:
-    """Copy or move *source* into *dest* and replace *source* with a symlink."""
+    """Copy or move *source* into *dest*, setting up a symlink only on first use.
+
+    If *source* is already a symlink (profile system is active), the current
+    profile data is copied into *dest* but the symlink is **not** changed —
+    the active profile stays the same.  Only ``switch_profile`` should change
+    which profile is active.
+
+    On first use (when *source* is a real directory), the directory is moved
+    into *dest* and replaced with a symlink.
+    """
     if source.is_symlink():
+        # Profile system already initialised — just snapshot the current data.
         resolved = source.resolve()
         shutil.copytree(resolved, dest, ignore=_ignore_non_copyable)
-        source.unlink()
-        source.symlink_to(dest)
+        # Leave the symlink untouched so the active profile doesn't change.
     elif source.exists():
+        # First-time setup: move the real directory into the profiles tree
+        # and replace it with a symlink.
         shutil.move(str(source), str(dest))
         source.symlink_to(dest)
     else:

@@ -2,6 +2,12 @@
 
 An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles across different platforms.
 
+## The Problem
+
+Cursor stores all configuration — settings, extensions, keybindings, and MCP servers — in a single set of directories. If you juggle multiple projects, clients, or GitHub identities, there's no built-in way to isolate them. You end up manually swapping configs, fighting git credential conflicts, and hoping you don't push to the wrong repo with the wrong account.
+
+![Gap Analysis](docs/gap-analysis.svg)
+
 ## Features
 
 - Switch between Cursor profiles seamlessly
@@ -60,6 +66,10 @@ After setting up your MCP servers, run `sync_mcp_config` to copy your `mcp.json`
 
 `switch_profile` also auto-injects `cursor-profiles-mcp` into any target profile that's missing it, as a safety net.
 
+## Architecture
+
+![Architecture Overview](docs/architecture-overview.svg)
+
 ## Available Tools
 
 ### Profile Management
@@ -72,6 +82,8 @@ List all available Cursor profiles. The active profile is marked with an asteris
 
 Switch to a specific profile and open Cursor. Automatically ensures the target profile has `cursor-profiles-mcp` configured before switching.
 
+![Profile Switch Workflow](docs/profile-switch-workflow.svg)
+
 | Parameter      | Type   | Description                       |
 | -------------- | ------ | --------------------------------- |
 | `profile_name` | string | Name of the profile to switch to  |
@@ -79,6 +91,8 @@ Switch to a specific profile and open Cursor. Automatically ensures the target p
 #### `init_profile`
 
 Create a new profile from your current Cursor configuration. Copies all settings, extensions, and MCP config.
+
+![Profile Init Workflow](docs/profile-init-workflow.svg)
 
 | Parameter      | Type   | Description              |
 | -------------- | ------ | ------------------------ |
@@ -104,6 +118,8 @@ Copy the current profile's `mcp.json` to all other profiles. Run this after addi
 ### Git Authentication
 
 These tools manage GitHub authentication across multiple accounts via the `gh` CLI.
+
+![Git Auth Workflow](docs/git-auth-workflow.svg)
 
 #### `list_git_accounts`
 

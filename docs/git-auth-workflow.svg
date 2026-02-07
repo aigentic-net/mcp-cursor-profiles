@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 680" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
+    </filter>
+    <linearGradient id="headerBg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="680" rx="12" fill="#f8fafc"/>
+
+  <!-- Title bar -->
+  <rect width="720" height="56" rx="12" fill="url(#headerBg)"/>
+  <rect y="44" width="720" height="12" fill="url(#headerBg)"/>
+  <text x="360" y="32" text-anchor="middle" fill="#f1f5f9" font-size="17" font-weight="600" letter-spacing="0.5">check_git_auth</text>
+  <text x="360" y="48" text-anchor="middle" fill="#94a3b8" font-size="10" letter-spacing="0.3">Verification &amp; Resolution Workflow</text>
+
+  <!-- Step 1 -->
+  <g transform="translate(40, 80)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">1</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Read origin remote URL</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">git remote get-url origin &#8594; parse GitHub owner, repo name, and embedded username</text>
+  </g>
+
+  <!-- Connector -->
+  <line x1="360" y1="132" x2="360" y2="148" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,146 360,156 364,146" fill="#cbd5e1"/>
+
+  <!-- Step 2 -->
+  <g transform="translate(40, 156)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">2</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Get active gh account</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">gh auth status &#8594; parse all authenticated accounts and which is active</text>
+  </g>
+
+  <!-- Connector -->
+  <line x1="360" y1="208" x2="360" y2="232" stroke="#cbd5e1" stroke-width="1.5"/>
+
+  <!-- Check A: Username embedded? -->
+  <g transform="translate(40, 240)">
+    <rect width="640" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="320" y="18" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" letter-spacing="0.5">CHECK A</text>
+    <text x="320" y="34" text-anchor="middle" fill="#334155" font-size="13" font-weight="600">Is a username embedded in the remote URL?</text>
+  </g>
+
+  <!-- Branch: No embedded user -->
+  <line x1="360" y1="284" x2="360" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Branch left (No) -->
+  <line x1="360" y1="300" x2="180" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="180" y1="300" x2="180" y2="316" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="176,314 180,324 184,314" fill="#cbd5e1"/>
+  <!-- Branch right (Yes) -->
+  <line x1="360" y1="300" x2="540" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="540" y1="300" x2="540" y2="316" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="536,314 540,324 544,314" fill="#cbd5e1"/>
+
+  <!-- Labels -->
+  <rect x="232" y="289" width="40" height="18" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width="0.5"/>
+  <text x="252" y="302" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="600">NO</text>
+  <rect x="432" y="289" width="40" height="18" rx="3" fill="#f0fdf4" stroke="#86efac" stroke-width="0.5"/>
+  <text x="452" y="302" text-anchor="middle" fill="#16a34a" font-size="10" font-weight="600">YES</text>
+
+  <!-- No branch: Warning -->
+  <g transform="translate(40, 324)">
+    <rect width="280" height="72" rx="8" fill="#fefce8" stroke="#facc15" stroke-width="1" filter="url(#shadow)"/>
+    <text x="140" y="22" text-anchor="middle" fill="#854d0e" font-size="11" font-weight="600">WARNING: No embedded username</text>
+    <text x="140" y="40" text-anchor="middle" fill="#92400e" font-size="10.5">Git will use whichever gh account is</text>
+    <text x="140" y="54" text-anchor="middle" fill="#92400e" font-size="10.5">active, which may not be correct.</text>
+  </g>
+  <!-- Fix suggestion -->
+  <line x1="180" y1="396" x2="180" y2="412" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="176,410 180,420 184,410" fill="#cbd5e1"/>
+  <g transform="translate(60, 420)">
+    <rect width="240" height="40" rx="8" fill="#334155" filter="url(#shadow)"/>
+    <text x="120" y="17" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="600">FIX: fix_git_remote</text>
+    <text x="120" y="32" text-anchor="middle" fill="#94a3b8" font-size="10">Embed username in remote URL</text>
+  </g>
+
+  <!-- Yes branch: Check B -->
+  <g transform="translate(400, 324)">
+    <rect width="280" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="140" y="18" text-anchor="middle" fill="#475569" font-size="11" font-weight="600" letter-spacing="0.5">CHECK B</text>
+    <text x="140" y="34" text-anchor="middle" fill="#334155" font-size="12" font-weight="600">Active account == repo owner?</text>
+  </g>
+
+  <!-- Branch from Check B -->
+  <line x1="540" y1="368" x2="540" y2="388" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Left (Mismatch) -->
+  <line x1="540" y1="388" x2="440" y2="388" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="440" y1="388" x2="440" y2="404" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="436,402 440,412 444,402" fill="#cbd5e1"/>
+  <!-- Right (Match) -->
+  <line x1="540" y1="388" x2="640" y2="388" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="640" y1="388" x2="640" y2="404" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="636,402 640,412 644,402" fill="#cbd5e1"/>
+
+  <!-- Mismatch label -->
+  <rect x="460" y="377" width="72" height="18" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width="0.5"/>
+  <text x="496" y="390" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="600">MISMATCH</text>
+  <!-- Match label -->
+  <rect x="568" y="377" width="54" height="18" rx="3" fill="#f0fdf4" stroke="#86efac" stroke-width="0.5"/>
+  <text x="595" y="390" text-anchor="middle" fill="#16a34a" font-size="10" font-weight="600">MATCH</text>
+
+  <!-- Mismatch result -->
+  <g transform="translate(340, 412)">
+    <rect width="200" height="72" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1" filter="url(#shadow)"/>
+    <text x="100" y="22" text-anchor="middle" fill="#991b1b" font-size="11" font-weight="600">Account mismatch</text>
+    <text x="100" y="40" text-anchor="middle" fill="#dc2626" font-size="10.5">Push will fail with</text>
+    <text x="100" y="54" text-anchor="middle" fill="#dc2626" font-size="10.5">"permission denied"</text>
+  </g>
+  <!-- Fix suggestions -->
+  <line x1="440" y1="484" x2="440" y2="504" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="436,502 440,512 444,502" fill="#cbd5e1"/>
+  <g transform="translate(320, 512)">
+    <rect width="240" height="56" rx="8" fill="#334155" filter="url(#shadow)"/>
+    <text x="120" y="18" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="600">FIX OPTIONS</text>
+    <text x="120" y="34" text-anchor="middle" fill="#94a3b8" font-size="10">switch_git_account  (quick fix)</text>
+    <text x="120" y="48" text-anchor="middle" fill="#94a3b8" font-size="10">fix_git_remote  (permanent fix)</text>
+  </g>
+
+  <!-- Match result -->
+  <g transform="translate(560, 412)">
+    <rect width="160" height="48" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1" filter="url(#shadow)"/>
+    <text x="80" y="20" text-anchor="middle" fill="#166534" font-size="11" font-weight="600">All clear</text>
+    <text x="80" y="38" text-anchor="middle" fill="#16a34a" font-size="11">Push will work</text>
+  </g>
+
+  <!-- Footer summary -->
+  <g transform="translate(40, 600)">
+    <rect width="640" height="56" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="320" y="22" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">RECOMMENDATION</text>
+    <text x="320" y="42" text-anchor="middle" fill="#64748b" font-size="11">Run fix_git_remote once per repo. After that, credentials resolve automatically  no switching needed.</text>
+  </g>
+</svg>

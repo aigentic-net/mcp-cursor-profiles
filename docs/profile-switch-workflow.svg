@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
+    </filter>
+    <linearGradient id="headerBg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="560" rx="12" fill="#f8fafc"/>
+
+  <!-- Title bar -->
+  <rect width="720" height="56" rx="12" fill="url(#headerBg)"/>
+  <rect y="44" width="720" height="12" fill="url(#headerBg)"/>
+  <text x="360" y="32" text-anchor="middle" fill="#f1f5f9" font-size="17" font-weight="600" letter-spacing="0.5">switch_profile</text>
+  <text x="360" y="48" text-anchor="middle" fill="#94a3b8" font-size="10" letter-spacing="0.3">Workflow</text>
+
+  <!-- Step 1: Validate -->
+  <g transform="translate(40, 80)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">1</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Validate profile name</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">Reject names with path separators, special characters, or empty strings</text>
+  </g>
+
+  <!-- Connector -->
+  <line x1="360" y1="132" x2="360" y2="148" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,146 360,156 364,146" fill="#cbd5e1"/>
+
+  <!-- Step 2: Check Cursor -->
+  <g transform="translate(40, 156)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">2</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Check if Cursor is running</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">Abort with error if Cursor process is detected  prevents config corruption</text>
+  </g>
+
+  <!-- Error branch -->
+  <line x1="600" y1="182" x2="660" y2="182" stroke="#fca5a5" stroke-width="1.5"/>
+  <rect x="610" y="170" width="80" height="24" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="650" y="186" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="600">QUIT FIRST</text>
+
+  <!-- Connector -->
+  <line x1="360" y1="208" x2="360" y2="224" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,222 360,232 364,222" fill="#cbd5e1"/>
+
+  <!-- Step 3: Verify profile -->
+  <g transform="translate(40, 232)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">3</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Verify profile exists</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">Profile must exist in both CursorProfiles/ and .cursor-profiles/ directories</text>
+  </g>
+
+  <!-- Error branch -->
+  <rect x="610" y="246" width="80" height="24" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="650" y="262" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="600">NOT FOUND</text>
+
+  <!-- Connector -->
+  <line x1="360" y1="284" x2="360" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,298 360,308 364,298" fill="#cbd5e1"/>
+
+  <!-- Step 4: Swap symlink 1 -->
+  <g transform="translate(40, 308)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">4</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Update Application Support symlink</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">~/Library/.../Cursor  &#8594;  CursorProfiles/{profile_name}</text>
+  </g>
+
+  <!-- Connector -->
+  <line x1="360" y1="360" x2="360" y2="376" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,374 360,384 364,374" fill="#cbd5e1"/>
+
+  <!-- Step 5: Swap symlink 2 -->
+  <g transform="translate(40, 384)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">5</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Update dotfile symlink</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">~/.cursor  &#8594;  .cursor-profiles/{profile_name}</text>
+  </g>
+
+  <!-- Connector -->
+  <line x1="360" y1="436" x2="360" y2="452" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,450 360,460 364,450" fill="#cbd5e1"/>
+
+  <!-- Step 6: Launch -->
+  <g transform="translate(40, 460)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#1e293b"/>
+    <rect x="8" width="32" height="52" fill="#1e293b"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">6</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Launch Cursor</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">Cursor opens and reads from the newly symlinked profile directories</text>
+  </g>
+
+  <!-- Success -->
+  <g transform="translate(240, 524)">
+    <rect width="240" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="120" y="18" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">Switched to profile successfully</text>
+  </g>
+</svg>

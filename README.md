@@ -8,6 +8,7 @@ An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles
 - Create new profiles from current configuration
 - Rename existing profiles
 - List all available profiles with active profile indication
+- Automatic MCP config propagation across profiles
 - Git authentication management across multiple GitHub accounts
 - Cross-platform support (macOS, Windows, Linux)
 - Safety checks to prevent data corruption while Cursor is running
@@ -53,17 +54,23 @@ Then add to your MCP client configuration (Cursor, Claude Desktop, etc.):
 
 > **Updating:** After pulling new changes, re-run `uv tool install -e .` to pick them up.
 
+### Post-Install: Sync MCP Config
+
+After setting up your MCP servers, run `sync_mcp_config` to copy your `mcp.json` to all profiles. This ensures every profile has access to the same MCP servers -- including `cursor-profiles-mcp` itself, so you can always switch back.
+
+`switch_profile` also auto-injects `cursor-profiles-mcp` into any target profile that's missing it, as a safety net.
+
 ## Available Tools
 
 ### Profile Management
 
-#### `list_profiles`
+#### `show_profiles`
 
 List all available Cursor profiles. The active profile is marked with an asterisk (`*`).
 
 #### `switch_profile`
 
-Switch to a specific profile and open Cursor.
+Switch to a specific profile and open Cursor. Automatically ensures the target profile has `cursor-profiles-mcp` configured before switching.
 
 | Parameter      | Type   | Description                       |
 | -------------- | ------ | --------------------------------- |
@@ -71,7 +78,7 @@ Switch to a specific profile and open Cursor.
 
 #### `init_profile`
 
-Create a new profile from your current Cursor configuration.
+Create a new profile from your current Cursor configuration. Copies all settings, extensions, and MCP config.
 
 | Parameter      | Type   | Description              |
 | -------------- | ------ | ------------------------ |
@@ -89,6 +96,10 @@ Rename an existing profile.
 #### `open_cursor`
 
 Open the Cursor application with the current profile.
+
+#### `sync_mcp_config`
+
+Copy the current profile's `mcp.json` to all other profiles. Run this after adding or changing MCP servers to keep all profiles in sync.
 
 ### Git Authentication
 
@@ -137,6 +148,15 @@ Switch the active GitHub account in the `gh` CLI.
 2. Maintains two sets of profiles (Application Support and dotfile versions)
 3. Ensures Cursor is closed before profile operations to prevent data corruption
 4. Automatically detects the correct paths for your operating system
+5. Propagates MCP config across profiles so you never lose access to your tools
+
+### Why MCP Config Propagation Matters
+
+Cursor stores its MCP server configuration in `~/.cursor/mcp.json`. Since `~/.cursor` is a symlink that gets swapped on profile switch, switching to a profile without `mcp.json` would lose **all** MCP servers -- including `cursor-profiles-mcp` itself. This would strand you in a profile with no way to switch back.
+
+To prevent this:
+- `switch_profile` auto-injects `cursor-profiles-mcp` into any target profile missing it
+- `sync_mcp_config` copies your full MCP config to all profiles at once
 
 ## Safety Features
 
@@ -145,6 +165,7 @@ Switch the active GitHub account in the `gh` CLI.
 - Validates profile existence before switching
 - Prevents overwriting existing profiles
 - Maintains symlink integrity
+- Ensures MCP config survives profile switching
 
 ## Troubleshooting
 
@@ -154,11 +175,15 @@ Quit Cursor completely before using profile management tools.
 
 ### "Profile not found" error
 
-Ensure the profile exists using `list_profiles`.
+Ensure the profile exists using `show_profiles`.
 
 ### Permission errors
 
 Make sure the script has read/write access to Cursor directories.
+
+### MCP servers missing after profile switch
+
+Run `sync_mcp_config` from a profile that has the correct `mcp.json`. This copies the config to all other profiles. For future switches, `switch_profile` auto-injects `cursor-profiles-mcp` as a safety net.
 
 ### MCP connection issues
 

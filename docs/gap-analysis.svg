@@ -122,7 +122,7 @@
     <text x="28" y="36" text-anchor="middle" fill="#16a34a" font-size="13" font-weight="700">&#10003;</text>
     <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">One-Command Switching</text>
     <text x="52" y="44" fill="#64748b" font-size="11.5">switch_profile handles symlinks, validation, and</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">launches Cursor  all through natural language.</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">launches Cursor — all through natural language.</text>
   </g>
 
   <!-- Impact callout -->
@@ -133,5 +133,5 @@
   </g>
 
   <!-- Footer -->
-  <text x="480" y="610" text-anchor="middle" fill="#94a3b8" font-size="11" letter-spacing="0.3">MCP Cursor Profiles Server  bridging the profile management gap in Cursor IDE</text>
+  <text x="480" y="610" text-anchor="middle" fill="#94a3b8" font-size="11" letter-spacing="0.3">MCP Cursor Profiles Server — bridging the profile management gap in Cursor IDE</text>
 </svg>

@@ -138,6 +138,6 @@
   <g transform="translate(40, 600)">
     <rect width="640" height="56" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
     <text x="320" y="22" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">RECOMMENDATION</text>
-    <text x="320" y="42" text-anchor="middle" fill="#64748b" font-size="11">Run fix_git_remote once per repo. After that, credentials resolve automatically  no switching needed.</text>
+    <text x="320" y="42" text-anchor="middle" fill="#64748b" font-size="11">Run fix_git_remote once per repo. After that, credentials resolve automatically — no switching needed.</text>
   </g>
 </svg>

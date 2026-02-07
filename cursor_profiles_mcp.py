@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""MCP Server for managing Cursor profiles across platforms."""
+"""MCP Server for managing Cursor IDE profiles and git identities.
+
+Leverages Cursor's native profile system for settings/extensions isolation
+and adds a git identity layer so switching profiles also switches GitHub
+credentials.
+"""
 
 import asyncio
 import json
 import platform
 import re
-import shutil
-import stat
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -25,402 +28,159 @@ def _get_platform_paths() -> dict[str, Path]:
 
     if system == "darwin":
         return {
-            "cursor_dir": home / "Library" / "Application Support" / "Cursor",
-            "cursor_profiles_dir": home / "Library" / "Application Support" / "CursorProfiles",
+            "cursor_data": home / "Library" / "Application Support" / "Cursor",
             "dot_cursor": home / ".cursor",
-            "dot_cursor_profiles": home / ".cursor-profiles",
         }
     elif system == "windows":
         return {
-            "cursor_dir": home / "AppData" / "Roaming" / "Cursor",
-            "cursor_profiles_dir": home / "AppData" / "Roaming" / "CursorProfiles",
+            "cursor_data": home / "AppData" / "Roaming" / "Cursor",
             "dot_cursor": home / ".cursor",
-            "dot_cursor_profiles": home / ".cursor-profiles",
         }
-    else:  # Linux and other Unix-like systems
+    else:  # Linux
         return {
-            "cursor_dir": home / ".config" / "Cursor",
-            "cursor_profiles_dir": home / ".config" / "CursorProfiles",
+            "cursor_data": home / ".config" / "Cursor",
             "dot_cursor": home / ".cursor",
-            "dot_cursor_profiles": home / ".cursor-profiles",
         }
 
 
 PATHS = _get_platform_paths()
 
-# Valid profile name: alphanumeric, hyphens, underscores, dots (no path separators)
-_PROFILE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Identities config file  (~/.cursor/identities.json)
+#
+# Maps Cursor profile names to GitHub usernames:
+#   {
+#     "identities": {
+#       "work": {"github_username": "my-work-account"},
+#       "personal": {"github_username": "my-personal-account"},
+#       "client-acme": {"github_username": "acme-contractor"}
+#     }
+#   }
 # ---------------------------------------------------------------------------
 
-def _validate_profile_name(name: str) -> None:
-    """Raise ValueError if *name* is not a safe profile name."""
-    if not name or not _PROFILE_NAME_RE.match(name):
-        raise ValueError(
-            f"Invalid profile name '{name}'. "
-            "Use only letters, digits, hyphens, underscores, and dots. "
-            "Must start with a letter or digit."
-        )
+def _identities_path() -> Path:
+    """Path to the identities config file."""
+    return PATHS["dot_cursor"] / "identities.json"
 
 
-def _ensure_profile_roots() -> None:
-    """Create the top-level profile directories if they don't exist."""
-    PATHS["cursor_profiles_dir"].mkdir(parents=True, exist_ok=True)
-    PATHS["dot_cursor_profiles"].mkdir(parents=True, exist_ok=True)
-
-
-async def _is_cursor_running() -> bool:
-    """Check whether Cursor is currently running (non-blocking)."""
-    system = platform.system().lower()
-    try:
-        if system == "darwin":
-            proc = await asyncio.create_subprocess_exec(
-                "pgrep", "-x", "Cursor",
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await proc.wait()
-            return proc.returncode == 0
-        elif system == "windows":
-            proc = await asyncio.create_subprocess_exec(
-                "tasklist", "/FI", "IMAGENAME eq Cursor.exe",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            stdout, _ = await proc.communicate()
-            return b"Cursor.exe" in stdout
-        else:  # Linux
-            proc = await asyncio.create_subprocess_exec(
-                "pgrep", "-x", "cursor",
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await proc.wait()
-            return proc.returncode == 0
-    except Exception:
-        return False
-
-
-async def _abort_if_running() -> None:
-    """Raise RuntimeError if Cursor is still running."""
-    if await _is_cursor_running():
-        raise RuntimeError(
-            "Cursor is currently running. Quit it before switching or modifying profiles."
-        )
-
-
-async def _open_cursor() -> None:
-    """Launch the Cursor application (non-blocking)."""
-    system = platform.system().lower()
-    try:
-        if system == "darwin":
-            proc = await asyncio.create_subprocess_exec("open", "-a", "Cursor")
-            await proc.wait()
-        elif system == "windows":
-            proc = await asyncio.create_subprocess_shell("start cursor")
-            await proc.wait()
-        else:  # Linux
-            proc = await asyncio.create_subprocess_exec("cursor")
-            await proc.wait()
-    except Exception as e:
-        raise RuntimeError(f"Failed to open Cursor: {e}") from e
-
-
-def _get_active_profile() -> str | None:
-    """Return the name of the currently active profile, or None."""
-    cursor_dir = PATHS["cursor_dir"]
-    if cursor_dir.is_symlink():
+def _load_identities() -> dict[str, dict]:
+    """Load the identities mapping from disk."""
+    path = _identities_path()
+    if path.exists():
         try:
-            return cursor_dir.resolve().name
-        except Exception:
-            return None
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data.get("identities", {})
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def _save_identities(identities: dict[str, dict]) -> None:
+    """Persist the identities mapping to disk."""
+    path = _identities_path()
+    path.write_text(
+        json.dumps({"identities": identities}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cursor profile helpers (native profile system)
+# ---------------------------------------------------------------------------
+
+def _storage_json_path() -> Path:
+    """Path to Cursor's global storage.json."""
+    return PATHS["cursor_data"] / "User" / "globalStorage" / "storage.json"
+
+
+def _read_storage() -> dict:
+    """Read Cursor's storage.json."""
+    path = _storage_json_path()
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _get_native_profiles() -> list[dict[str, str]]:
+    """Return Cursor's native profiles from storage.json.
+
+    Each entry has ``name`` and ``location`` (the hash-based directory name).
+    The Default profile is always included even if not in the list.
+    """
+    storage = _read_storage()
+    profiles = storage.get("userDataProfiles", [])
+    return profiles
+
+
+def _get_active_profile_from_associations() -> str | None:
+    """Try to determine which profile is currently active.
+
+    Checks the last-opened empty window association as a heuristic.
+    Returns the profile name or None.
+    """
+    storage = _read_storage()
+    profiles = storage.get("userDataProfiles", [])
+    assoc = storage.get("profileAssociations", {})
+
+    # Map location hashes back to profile names
+    loc_to_name: dict[str, str] = {}
+    for p in profiles:
+        loc_to_name[p["location"]] = p["name"]
+
+    # Check emptyWindows associations (most recently opened)
+    empty_windows = assoc.get("emptyWindows", {})
+    if empty_windows:
+        # Get the most recent empty window association
+        for _ts, loc in sorted(empty_windows.items(), reverse=True):
+            if loc == "__default__profile__":
+                return "Default"
+            if loc in loc_to_name:
+                return loc_to_name[loc]
+
     return None
 
 
-def _swap_symlink(link_path: Path, target: Path) -> None:
-    """Atomically replace a symlink at *link_path* to point at *target*.
-
-    Raises RuntimeError if *link_path* exists but is **not** a symlink (to
-    avoid accidentally destroying real directories).
-    """
-    if link_path.exists() and not link_path.is_symlink():
-        raise RuntimeError(
-            f"{link_path} exists and is not a symlink. "
-            "Please back it up and remove it manually."
-        )
-    if link_path.is_symlink():
-        link_path.unlink()
-    link_path.symlink_to(target)
-
-
 # ---------------------------------------------------------------------------
-# MCP config safety
+# Subprocess helpers
 # ---------------------------------------------------------------------------
 
-# Minimal MCP config entry that ensures cursor-profiles-mcp is always available.
-_SELF_MCP_ENTRY = {
-    "defer_loading": True,
-    "command": "cursor-profiles-mcp",
-    "transportType": "stdio",
-}
-
-
-def _ensure_mcp_config(profile_dot_dir: Path) -> None:
-    """Ensure *profile_dot_dir* has cursor-profiles-mcp in its mcp.json.
-
-    If mcp.json doesn't exist, creates one with just the cursor-profiles-mcp
-    entry.  If it exists but is missing the entry, injects it.  Existing
-    entries and other servers are never modified.
-    """
-    mcp_json = profile_dot_dir / "mcp.json"
-
-    if mcp_json.exists():
-        try:
-            data = json.loads(mcp_json.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            data = {}
-    else:
-        data = {}
-
-    servers = data.setdefault("mcpServers", {})
-
-    # Check if cursor-profiles-mcp is already configured under any key.
-    already_present = any(
-        srv.get("command") == "cursor-profiles-mcp"
-        for srv in servers.values()
-        if isinstance(srv, dict)
+async def _run_cmd(*args: str) -> tuple[int, str, str]:
+    """Run a command and return (returncode, stdout, stderr)."""
+    proc = await asyncio.create_subprocess_exec(
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
-
-    if not already_present:
-        servers["cursor_profiles"] = _SELF_MCP_ENTRY
-        mcp_json.write_text(
-            json.dumps(data, indent=2) + "\n", encoding="utf-8"
-        )
+    stdout, stderr = await proc.communicate()
+    return proc.returncode or 0, stdout.decode().strip(), stderr.decode().strip()
 
 
-def _sync_mcp_json_to_all() -> list[str]:
-    """Copy the current profile's mcp.json into every other profile.
+async def _open_cursor_with_profile(profile_name: str | None = None) -> None:
+    """Launch Cursor, optionally with a specific profile."""
+    system = platform.system().lower()
 
-    Returns a list of profile names that were updated.
-    """
-    _ensure_profile_roots()
-    source = PATHS["dot_cursor"] / "mcp.json"
-    if not source.exists():
-        raise FileNotFoundError("No mcp.json found in the active profile.")
-
-    content = source.read_text(encoding="utf-8")
-    updated: list[str] = []
-
-    profiles_dir = PATHS["dot_cursor_profiles"]
-    if profiles_dir.exists():
-        for item in sorted(profiles_dir.iterdir()):
-            if not item.is_dir():
-                continue
-            target = item / "mcp.json"
-            # Skip the currently active profile (it's the source).
-            if target.resolve() == source.resolve():
-                continue
-            target.write_text(content, encoding="utf-8")
-            updated.append(item.name)
-
-    return updated
-
-
-# ---------------------------------------------------------------------------
-# MCP Tools
-# ---------------------------------------------------------------------------
-
-@mcp.tool(name="show_profiles")
-async def get_profiles() -> str:
-    """List all available Cursor profiles.
-
-    The active profile is marked with an asterisk (*).
-    """
-    _ensure_profile_roots()
-
-    profiles: set[str] = set()
-
-    for key in ("cursor_profiles_dir", "dot_cursor_profiles"):
-        directory = PATHS[key]
-        if directory.exists():
-            for item in directory.iterdir():
-                if item.is_dir():
-                    profiles.add(item.name)
-
-    if not profiles:
-        return "No profiles found."
-
-    active = _get_active_profile()
-    lines = []
-    for name in sorted(profiles):
-        prefix = "* " if name == active else "  "
-        lines.append(f"{prefix}{name}")
-
-    return "Available profiles:\n" + "\n".join(lines)
-
-
-@mcp.tool()
-async def switch_profile(profile_name: str) -> str:
-    """Switch to a specific Cursor profile and open Cursor.
-
-    Args:
-        profile_name: Name of the profile to switch to.
-    """
-    _validate_profile_name(profile_name)
-    await _abort_if_running()
-    _ensure_profile_roots()
-
-    cursor_profile_path = PATHS["cursor_profiles_dir"] / profile_name
-    dot_profile_path = PATHS["dot_cursor_profiles"] / profile_name
-
-    if not cursor_profile_path.exists() or not dot_profile_path.exists():
-        raise ValueError(
-            f"Profile '{profile_name}' not found in both profile directories."
-        )
-
-    # Ensure the target profile has cursor-profiles-mcp configured so
-    # the user can always switch back after Cursor restarts.
-    _ensure_mcp_config(dot_profile_path)
-
-    _swap_symlink(PATHS["cursor_dir"], cursor_profile_path)
-    _swap_symlink(PATHS["dot_cursor"], dot_profile_path)
-
-    await _open_cursor()
-    return f"Switched to profile '{profile_name}' and opened Cursor."
-
-
-@mcp.tool()
-async def init_profile(profile_name: str) -> str:
-    """Create a new profile from the current Cursor configuration.
-
-    Args:
-        profile_name: Name for the new profile.
-    """
-    _validate_profile_name(profile_name)
-    await _abort_if_running()
-    _ensure_profile_roots()
-
-    cursor_profile_path = PATHS["cursor_profiles_dir"] / profile_name
-    dot_profile_path = PATHS["dot_cursor_profiles"] / profile_name
-
-    if cursor_profile_path.exists() or dot_profile_path.exists():
-        raise ValueError(f"Profile '{profile_name}' already exists.")
-
-    # --- Application Support / config directory ---
-    _init_single_dir(PATHS["cursor_dir"], cursor_profile_path)
-
-    # --- Dotfile directory ---
-    _init_single_dir(PATHS["dot_cursor"], dot_profile_path)
-
-    await _open_cursor()
-    return f"Initialized new profile '{profile_name}' and opened Cursor."
-
-
-def _ignore_non_copyable(directory: str, contents: list[str]) -> list[str]:
-    """Return entries that should be skipped by copytree (sockets, pipes, etc.)."""
-    ignored: list[str] = []
-    for name in contents:
-        path = Path(directory) / name
-        try:
-            mode = path.lstat().st_mode
-            if stat.S_ISSOCK(mode) or stat.S_ISFIFO(mode):
-                ignored.append(name)
-        except OSError:
-            pass
-    return ignored
-
-
-def _init_single_dir(source: Path, dest: Path) -> None:
-    """Copy or move *source* into *dest*, setting up a symlink only on first use.
-
-    If *source* is already a symlink (profile system is active), the current
-    profile data is copied into *dest* but the symlink is **not** changed —
-    the active profile stays the same.  Only ``switch_profile`` should change
-    which profile is active.
-
-    On first use (when *source* is a real directory), the directory is moved
-    into *dest* and replaced with a symlink.
-    """
-    if source.is_symlink():
-        # Profile system already initialised — just snapshot the current data.
-        resolved = source.resolve()
-        shutil.copytree(resolved, dest, ignore=_ignore_non_copyable)
-        # Leave the symlink untouched so the active profile doesn't change.
-    elif source.exists():
-        # First-time setup: move the real directory into the profiles tree
-        # and replace it with a symlink.
-        shutil.move(str(source), str(dest))
-        source.symlink_to(dest)
+    if system == "darwin":
+        cmd = ["/Applications/Cursor.app/Contents/Resources/app/bin/cursor"]
+    elif system == "windows":
+        cmd = ["cursor"]
     else:
-        dest.mkdir(parents=True)
-        source.symlink_to(dest)
+        cmd = ["cursor"]
 
+    if profile_name and profile_name != "Default":
+        cmd.extend(["--profile", profile_name])
 
-@mcp.tool()
-async def rename_profile(old_name: str, new_name: str) -> str:
-    """Rename an existing Cursor profile.
-
-    Args:
-        old_name: Current name of the profile.
-        new_name: New name for the profile.
-    """
-    _validate_profile_name(old_name)
-    _validate_profile_name(new_name)
-    await _abort_if_running()
-
-    old_cursor = PATHS["cursor_profiles_dir"] / old_name
-    old_dot = PATHS["dot_cursor_profiles"] / old_name
-    new_cursor = PATHS["cursor_profiles_dir"] / new_name
-    new_dot = PATHS["dot_cursor_profiles"] / new_name
-
-    if not old_cursor.exists() or not old_dot.exists():
-        raise ValueError(
-            f"Profile '{old_name}' does not exist in both profile directories."
-        )
-
-    if new_cursor.exists() or new_dot.exists():
-        raise ValueError(f"Profile '{new_name}' already exists.")
-
-    shutil.move(str(old_cursor), str(new_cursor))
-    shutil.move(str(old_dot), str(new_dot))
-
-    # Update symlinks if they currently point to the old profile.
-    if PATHS["cursor_dir"].is_symlink():
-        target = PATHS["cursor_dir"].resolve()
-        if target.name == old_name:
-            _swap_symlink(PATHS["cursor_dir"], new_cursor)
-
-    if PATHS["dot_cursor"].is_symlink():
-        target = PATHS["dot_cursor"].resolve()
-        if target.name == old_name:
-            _swap_symlink(PATHS["dot_cursor"], new_dot)
-
-    return f"Renamed profile '{old_name}' to '{new_name}'."
-
-
-@mcp.tool()
-async def open_cursor() -> str:
-    """Open the Cursor application with the current profile."""
-    await _open_cursor()
-    return "Opened Cursor application."
-
-
-@mcp.tool()
-async def sync_mcp_config() -> str:
-    """Copy the current profile's MCP config (mcp.json) to all other profiles.
-
-    This ensures every profile has the same MCP servers available,
-    so you can always switch between profiles without losing access
-    to cursor-profiles-mcp or any other MCP server.
-    """
-    updated = _sync_mcp_json_to_all()
-    if not updated:
-        return "No other profiles to sync to."
-    names = ", ".join(updated)
-    return f"Synced mcp.json to {len(updated)} profile(s): {names}"
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    # Don't wait — let Cursor run in the background
+    # Give it a moment to start
+    await asyncio.sleep(1)
 
 
 # ---------------------------------------------------------------------------
@@ -438,22 +198,8 @@ _GITHUB_SSH_RE = re.compile(
 )
 
 
-async def _run_cmd(*args: str) -> tuple[int, str, str]:
-    """Run a command and return (returncode, stdout, stderr)."""
-    proc = await asyncio.create_subprocess_exec(
-        *args,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await proc.communicate()
-    return proc.returncode or 0, stdout.decode().strip(), stderr.decode().strip()
-
-
 def _parse_github_remote(url: str) -> dict[str, str | None] | None:
-    """Extract owner, repo, and embedded username from a GitHub remote URL.
-
-    Returns None if the URL is not a recognised GitHub remote.
-    """
+    """Extract owner, repo, and embedded username from a GitHub remote URL."""
     m = _GITHUB_HTTPS_RE.match(url) or _GITHUB_SSH_RE.match(url)
     if not m:
         return None
@@ -461,25 +207,23 @@ def _parse_github_remote(url: str) -> dict[str, str | None] | None:
     return {
         "owner": groups["owner"],
         "repo": groups["repo"],
-        "embedded_user": groups.get("user"),  # only present for HTTPS
+        "embedded_user": groups.get("user"),
     }
 
 
 async def _get_gh_accounts() -> list[dict[str, str | bool]]:
     """Return a list of ``{username, active}`` dicts from ``gh auth status``."""
     rc, stdout, stderr = await _run_cmd("gh", "auth", "status")
-    combined = f"{stdout}\n{stderr}"  # gh may write to stderr
+    combined = f"{stdout}\n{stderr}"
 
     accounts: list[dict[str, str | bool]] = []
     current_user: str | None = None
 
     for line in combined.splitlines():
-        # "✓ Logged in to github.com account USERNAME (keyring)"
         logged_in = re.search(r"Logged in to github\.com account (\S+)", line)
         if logged_in:
             current_user = logged_in.group(1)
             continue
-        # "- Active account: true" / "- Active account: false"
         active_match = re.search(r"Active account:\s*(true|false)", line)
         if active_match and current_user:
             accounts.append({
@@ -489,6 +233,180 @@ async def _get_gh_accounts() -> list[dict[str, str | bool]]:
             current_user = None
 
     return accounts
+
+
+async def _switch_gh_account(username: str) -> tuple[bool, str]:
+    """Switch the active gh account. Returns (success, message)."""
+    rc, stdout, stderr = await _run_cmd(
+        "gh", "auth", "switch", "-h", "github.com", "-u", username,
+    )
+    if rc != 0:
+        return False, f"Failed to switch to '{username}': {stderr or stdout}"
+    return True, f"Switched active gh account to '{username}'."
+
+
+# ---------------------------------------------------------------------------
+# MCP Tools — Profile management (leveraging Cursor's native profiles)
+# ---------------------------------------------------------------------------
+
+@mcp.tool(name="show_profiles")
+async def show_profiles() -> str:
+    """List all available Cursor profiles.
+
+    The active profile is marked with an asterisk (*).
+    """
+    native = _get_native_profiles()
+    identities = _load_identities()
+    active = _get_active_profile_from_associations()
+
+    lines = []
+
+    # Default profile is always present
+    prefix = "* " if active == "Default" or active is None else "  "
+    gh_info = ""
+    if "Default" in identities:
+        gh_info = f"  (github: {identities['Default']['github_username']})"
+    lines.append(f"{prefix}Default{gh_info}")
+
+    for prof in sorted(native, key=lambda p: p["name"]):
+        name = prof["name"]
+        prefix = "* " if name == active else "  "
+        gh_info = ""
+        if name in identities:
+            gh_info = f"  (github: {identities[name]['github_username']})"
+        lines.append(f"{prefix}{name}{gh_info}")
+
+    return "Cursor profiles:\n" + "\n".join(lines)
+
+
+@mcp.tool()
+async def switch_profile(profile_name: str) -> str:
+    """Switch to a specific Cursor profile and open Cursor.
+
+    If the profile has a linked git identity, the active GitHub account
+    is switched automatically.
+
+    Args:
+        profile_name: Name of the profile to switch to.
+    """
+    # Verify the profile exists (unless it's Default)
+    if profile_name != "Default":
+        native = _get_native_profiles()
+        names = {p["name"] for p in native}
+        if profile_name not in names:
+            available = ", ".join(sorted(names)) or "(none)"
+            raise ValueError(
+                f"Profile '{profile_name}' not found. "
+                f"Available: Default, {available}"
+            )
+
+    # Switch git identity if one is linked
+    identities = _load_identities()
+    git_msg = ""
+    if profile_name in identities:
+        gh_user = identities[profile_name]["github_username"]
+        ok, msg = await _switch_gh_account(gh_user)
+        git_msg = f"\nGit identity: {msg}"
+
+    # Open Cursor with the target profile
+    await _open_cursor_with_profile(profile_name)
+
+    return f"Switched to profile '{profile_name}' and opened Cursor.{git_msg}"
+
+
+@mcp.tool()
+async def init_profile(profile_name: str, github_username: str = "") -> str:
+    """Create a new Cursor profile, optionally linked to a GitHub identity.
+
+    Uses Cursor's native profile system. The profile is created and Cursor
+    opens with it.
+
+    Args:
+        profile_name: Name for the new profile.
+        github_username: GitHub username to link (optional). If provided,
+                        switching to this profile will auto-switch gh accounts.
+    """
+    if not profile_name or not re.match(r"^[A-Za-z0-9][A-Za-z0-9 ._-]*$", profile_name):
+        raise ValueError(
+            f"Invalid profile name '{profile_name}'. "
+            "Use letters, digits, spaces, hyphens, underscores, and dots. "
+            "Must start with a letter or digit."
+        )
+
+    # Check if it already exists
+    native = _get_native_profiles()
+    names = {p["name"] for p in native}
+    if profile_name in names:
+        raise ValueError(f"Profile '{profile_name}' already exists.")
+
+    # Link git identity if provided
+    if github_username.strip():
+        identities = _load_identities()
+        identities[profile_name] = {"github_username": github_username.strip()}
+        _save_identities(identities)
+
+    # Create the profile by opening Cursor with --profile (auto-creates if new)
+    await _open_cursor_with_profile(profile_name)
+
+    result = f"Created profile '{profile_name}' and opened Cursor."
+    if github_username.strip():
+        result += f"\nLinked to GitHub account: {github_username.strip()}"
+
+    return result
+
+
+@mcp.tool()
+async def link_identity(profile_name: str, github_username: str) -> str:
+    """Link a GitHub identity to an existing Cursor profile.
+
+    When you switch to this profile, the gh CLI account will be
+    switched automatically.
+
+    Args:
+        profile_name: Name of the Cursor profile.
+        github_username: GitHub username to link.
+    """
+    # Verify the profile exists
+    if profile_name != "Default":
+        native = _get_native_profiles()
+        names = {p["name"] for p in native}
+        if profile_name not in names:
+            raise ValueError(f"Profile '{profile_name}' not found.")
+
+    if not github_username.strip():
+        raise ValueError("GitHub username cannot be empty.")
+
+    identities = _load_identities()
+    identities[profile_name] = {"github_username": github_username.strip()}
+    _save_identities(identities)
+
+    return (
+        f"Linked profile '{profile_name}' to GitHub account '{github_username.strip()}'.\n"
+        f"Switching to this profile will now auto-switch your gh account."
+    )
+
+
+@mcp.tool()
+async def unlink_identity(profile_name: str) -> str:
+    """Remove the GitHub identity link from a Cursor profile.
+
+    Args:
+        profile_name: Name of the Cursor profile to unlink.
+    """
+    identities = _load_identities()
+    if profile_name not in identities:
+        return f"Profile '{profile_name}' has no linked identity."
+
+    del identities[profile_name]
+    _save_identities(identities)
+    return f"Removed identity link from profile '{profile_name}'."
+
+
+@mcp.tool()
+async def open_cursor() -> str:
+    """Open the Cursor application with the current profile."""
+    await _open_cursor_with_profile()
+    return "Opened Cursor application."
 
 
 # ---------------------------------------------------------------------------
@@ -527,7 +445,6 @@ async def check_git_auth(repo_path: str) -> str:
     if not (repo / ".git").exists():
         raise ValueError(f"'{repo}' is not a git repository (no .git directory).")
 
-    # Get remote URL
     rc, url, _ = await _run_cmd("git", "-C", str(repo), "remote", "get-url", "origin")
     if rc != 0 or not url:
         raise ValueError("No 'origin' remote found in this repository.")
@@ -536,7 +453,6 @@ async def check_git_auth(repo_path: str) -> str:
     if parsed is None:
         return f"Remote URL is not a GitHub URL: {url}\nGit auth check only supports GitHub remotes."
 
-    # Get active gh account
     accounts = await _get_gh_accounts()
     active = next((a for a in accounts if a["active"]), None)
     active_user = active["username"] if active else None
@@ -553,7 +469,6 @@ async def check_git_auth(repo_path: str) -> str:
         "",
     ]
 
-    # Check embedded username in URL
     has_issues = False
 
     if not embedded:
@@ -566,7 +481,6 @@ async def check_git_auth(repo_path: str) -> str:
         )
         has_issues = True
 
-    # Check active account vs owner
     if active_user and active_user != owner:
         lines.append(
             f"MISMATCH: Active gh account '{active_user}' does not match "
@@ -616,14 +530,12 @@ async def fix_git_remote(repo_path: str, username: str = "") -> str:
     target_user = username.strip() or parsed["owner"]
     new_url = f"https://{target_user}@github.com/{parsed['owner']}/{parsed['repo']}"
 
-    # Update remote URL
     rc, _, err = await _run_cmd(
         "git", "-C", str(repo), "remote", "set-url", "origin", new_url,
     )
     if rc != 0:
         raise RuntimeError(f"Failed to update remote URL: {err}")
 
-    # Ensure gh credential helper is configured
     rc2, _, err2 = await _run_cmd("gh", "auth", "setup-git", "-h", "github.com")
     setup_note = ""
     if rc2 != 0:
@@ -645,15 +557,10 @@ async def switch_git_account(account: str) -> str:
     Args:
         account: GitHub username to switch to.
     """
-    rc, stdout, stderr = await _run_cmd(
-        "gh", "auth", "switch", "-h", "github.com", "-u", account,
-    )
-    if rc != 0:
-        raise RuntimeError(
-            f"Failed to switch to account '{account}': {stderr or stdout}"
-        )
-
-    return f"Switched active gh account to '{account}'."
+    ok, msg = await _switch_gh_account(account)
+    if not ok:
+        raise RuntimeError(msg)
+    return msg
 
 
 # ---------------------------------------------------------------------------
@@ -662,23 +569,21 @@ async def switch_git_account(account: str) -> str:
 
 @mcp.resource("cursor://profiles")
 async def profiles_overview() -> str:
-    """Cursor profiles overview including platform info and active state."""
-    _ensure_profile_roots()
-
-    profiles: set[str] = set()
-    for key in ("cursor_profiles_dir", "dot_cursor_profiles"):
-        directory = PATHS[key]
-        if directory.exists():
-            for item in directory.iterdir():
-                if item.is_dir():
-                    profiles.add(item.name)
+    """Cursor profiles overview including platform info and identity bindings."""
+    native = _get_native_profiles()
+    identities = _load_identities()
+    accounts = await _get_gh_accounts()
+    active_gh = next((a["username"] for a in accounts if a["active"]), None)
 
     info = {
         "platform": platform.system(),
-        "paths": {k: str(v) for k, v in PATHS.items()},
-        "profiles": sorted(profiles),
-        "active_profile": _get_active_profile(),
-        "cursor_running": await _is_cursor_running(),
+        "cursor_data": str(PATHS["cursor_data"]),
+        "profiles": [
+            {"name": "Default", "location": "__default__profile__"},
+            *[{"name": p["name"], "location": p["location"]} for p in native],
+        ],
+        "identities": identities,
+        "active_gh_account": active_gh,
     }
     return json.dumps(info, indent=2)
 

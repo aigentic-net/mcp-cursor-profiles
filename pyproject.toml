@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-cursor-profiles"
-version = "1.0.0"
-description = "MCP server for managing Cursor profiles"
+version = "2.0.0"
+description = "MCP server for Cursor profiles with git identity management"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

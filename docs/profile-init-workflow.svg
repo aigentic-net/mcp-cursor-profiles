@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
   <defs>
     <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
       <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
@@ -10,7 +10,7 @@
   </defs>
 
   <!-- Background -->
-  <rect width="720" height="640" rx="12" fill="#f8fafc"/>
+  <rect width="720" height="480" rx="12" fill="#f8fafc"/>
 
   <!-- Title bar -->
   <rect width="720" height="56" rx="12" fill="url(#headerBg)"/>
@@ -18,117 +18,76 @@
   <text x="360" y="32" text-anchor="middle" fill="#f1f5f9" font-size="17" font-weight="600" letter-spacing="0.5">init_profile</text>
   <text x="360" y="48" text-anchor="middle" fill="#94a3b8" font-size="10" letter-spacing="0.3">Workflow</text>
 
-  <!-- Step 1 -->
+  <!-- Step 1: Validate name -->
   <g transform="translate(40, 80)">
     <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
     <rect width="40" height="52" rx="8" fill="#1e293b"/>
     <rect x="8" width="32" height="52" fill="#1e293b"/>
     <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">1</text>
-    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Validate &amp; safety checks</text>
-    <text x="60" y="42" fill="#64748b" font-size="11">Validate name, ensure Cursor is not running, ensure profile doesn't already exist</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Validate profile name</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">Must start with a letter or digit. Allows spaces, hyphens, underscores, dots.</text>
   </g>
 
   <!-- Connector -->
   <line x1="360" y1="132" x2="360" y2="148" stroke="#cbd5e1" stroke-width="1.5"/>
   <polygon points="356,146 360,156 364,146" fill="#cbd5e1"/>
 
-  <!-- Step 2: Detect state -->
+  <!-- Step 2: Check uniqueness -->
   <g transform="translate(40, 156)">
     <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
     <rect width="40" height="52" rx="8" fill="#1e293b"/>
     <rect x="8" width="32" height="52" fill="#1e293b"/>
     <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">2</text>
-    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Detect current config state</text>
-    <text x="60" y="42" fill="#64748b" font-size="11">Is the current Cursor config directory a symlink, a real directory, or missing?</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Check profile doesn't already exist</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">Query storage.json userDataProfiles to prevent duplicate names</text>
   </g>
 
-  <!-- Branch connector -->
-  <line x1="360" y1="208" x2="360" y2="232" stroke="#cbd5e1" stroke-width="1.5"/>
-
-  <!-- Three branches -->
-  <line x1="360" y1="232" x2="120" y2="232" stroke="#cbd5e1" stroke-width="1.5"/>
-  <line x1="360" y1="232" x2="600" y2="232" stroke="#cbd5e1" stroke-width="1.5"/>
-  <line x1="120" y1="232" x2="120" y2="252" stroke="#cbd5e1" stroke-width="1.5"/>
-  <polygon points="116,250 120,260 124,250" fill="#cbd5e1"/>
-  <line x1="360" y1="232" x2="360" y2="252" stroke="#cbd5e1" stroke-width="1.5"/>
-  <polygon points="356,250 360,260 364,250" fill="#cbd5e1"/>
-  <line x1="600" y1="232" x2="600" y2="252" stroke="#cbd5e1" stroke-width="1.5"/>
-  <polygon points="596,250 600,260 604,250" fill="#cbd5e1"/>
-
-  <!-- Branch A: Symlink (existing profile) -->
-  <g transform="translate(20, 260)">
-    <rect width="200" height="24" rx="4" fill="#fefce8" stroke="#facc15" stroke-width="1"/>
-    <text x="100" y="16" text-anchor="middle" fill="#854d0e" font-size="10" font-weight="600">SYMLINK (existing profile)</text>
-  </g>
-  <g transform="translate(20, 296)">
-    <rect width="200" height="80" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
-    <text x="100" y="24" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="600">Copy resolved target</text>
-    <text x="100" y="44" text-anchor="middle" fill="#64748b" font-size="10.5">Copies the current profile's</text>
-    <text x="100" y="58" text-anchor="middle" fill="#64748b" font-size="10.5">contents to the new directory,</text>
-    <text x="100" y="72" text-anchor="middle" fill="#64748b" font-size="10.5">then re-points the symlink.</text>
-  </g>
-
-  <!-- Branch B: Real directory (first time) -->
-  <g transform="translate(260, 260)">
-    <rect width="200" height="24" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="100" y="16" text-anchor="middle" fill="#475569" font-size="10" font-weight="600">REAL DIRECTORY (first time)</text>
-  </g>
-  <g transform="translate(260, 296)">
-    <rect width="200" height="80" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
-    <text x="100" y="24" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="600">Move directory</text>
-    <text x="100" y="44" text-anchor="middle" fill="#64748b" font-size="10.5">Moves the entire existing</text>
-    <text x="100" y="58" text-anchor="middle" fill="#64748b" font-size="10.5">config directory into the new</text>
-    <text x="100" y="72" text-anchor="middle" fill="#64748b" font-size="10.5">profile location.</text>
-  </g>
-
-  <!-- Branch C: Does not exist -->
-  <g transform="translate(500, 260)">
-    <rect width="200" height="24" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="100" y="16" text-anchor="middle" fill="#475569" font-size="10" font-weight="600">DOES NOT EXIST</text>
-  </g>
-  <g transform="translate(500, 296)">
-    <rect width="200" height="80" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
-    <text x="100" y="24" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="600">Create empty dir</text>
-    <text x="100" y="44" text-anchor="middle" fill="#64748b" font-size="10.5">Creates a fresh, empty</text>
-    <text x="100" y="58" text-anchor="middle" fill="#64748b" font-size="10.5">profile directory for a</text>
-    <text x="100" y="72" text-anchor="middle" fill="#64748b" font-size="10.5">clean start.</text>
-  </g>
-
-  <!-- Merge connectors -->
-  <line x1="120" y1="376" x2="120" y2="410" stroke="#cbd5e1" stroke-width="1.5"/>
-  <line x1="360" y1="376" x2="360" y2="410" stroke="#cbd5e1" stroke-width="1.5"/>
-  <line x1="600" y1="376" x2="600" y2="410" stroke="#cbd5e1" stroke-width="1.5"/>
-  <line x1="120" y1="410" x2="600" y2="410" stroke="#cbd5e1" stroke-width="1.5"/>
-  <line x1="360" y1="410" x2="360" y2="430" stroke="#cbd5e1" stroke-width="1.5"/>
-  <polygon points="356,428 360,438 364,428" fill="#cbd5e1"/>
-
-  <!-- Step 3: Create symlink -->
-  <g transform="translate(40, 438)">
-    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
-    <rect width="40" height="52" rx="8" fill="#1e293b"/>
-    <rect x="8" width="32" height="52" fill="#1e293b"/>
-    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">3</text>
-    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Create symlinks to new profile</text>
-    <text x="60" y="42" fill="#64748b" font-size="11">Both ~/.cursor and ~/Library/.../Cursor now point to the new profile directory</text>
-  </g>
+  <!-- Error branch -->
+  <rect x="600" y="170" width="90" height="24" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="645" y="186" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="600">EXISTS</text>
 
   <!-- Connector -->
-  <line x1="360" y1="490" x2="360" y2="506" stroke="#cbd5e1" stroke-width="1.5"/>
-  <polygon points="356,504 360,514 364,504" fill="#cbd5e1"/>
+  <line x1="360" y1="208" x2="360" y2="224" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,222 360,232 364,222" fill="#cbd5e1"/>
 
-  <!-- Step 4: Launch -->
-  <g transform="translate(40, 514)">
+  <!-- Step 3: Link identity (optional) -->
+  <g transform="translate(40, 232)">
+    <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <rect width="40" height="52" rx="8" fill="#0f766e"/>
+    <rect x="8" width="32" height="52" fill="#0f766e"/>
+    <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">3</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Link GitHub identity (optional)</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">If github_username provided, save to identities.json for auto-switching</text>
+  </g>
+
+  <!-- Optional badge -->
+  <rect x="586" y="246" width="100" height="24" rx="4" fill="#f0fdfa" stroke="#5eead4" stroke-width="1"/>
+  <text x="636" y="262" text-anchor="middle" fill="#0f766e" font-size="10" font-weight="600">OPTIONAL</text>
+
+  <!-- Connector -->
+  <line x1="360" y1="284" x2="360" y2="300" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,298 360,308 364,298" fill="#cbd5e1"/>
+
+  <!-- Step 4: Create via Cursor CLI -->
+  <g transform="translate(40, 308)">
     <rect width="640" height="52" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
     <rect width="40" height="52" rx="8" fill="#1e293b"/>
     <rect x="8" width="32" height="52" fill="#1e293b"/>
     <text x="20" y="31" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">4</text>
-    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Launch Cursor</text>
-    <text x="60" y="42" fill="#64748b" font-size="11">Cursor opens with the new profile active and ready to use</text>
+    <text x="60" y="25" fill="#1e293b" font-size="13" font-weight="600">Create profile via Cursor CLI</text>
+    <text x="60" y="42" fill="#64748b" font-size="11">cursor --profile "name" &#8212; Cursor auto-creates the profile and opens with it</text>
   </g>
 
   <!-- Success -->
-  <g transform="translate(230, 584)">
-    <rect width="260" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
-    <text x="130" y="18" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">Profile created and active</text>
+  <line x1="360" y1="360" x2="360" y2="376" stroke="#cbd5e1" stroke-width="1.5"/>
+  <polygon points="356,374 360,384 364,374" fill="#cbd5e1"/>
+
+  <g transform="translate(120, 390)">
+    <rect width="480" height="40" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="240" y="18" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">Profile created + Cursor opened</text>
+    <text x="240" y="33" text-anchor="middle" fill="#16a34a" font-size="10">Visible in Cursor Settings UI, with optional git identity binding</text>
   </g>
+
+  <!-- Footer note -->
+  <text x="360" y="460" text-anchor="middle" fill="#94a3b8" font-size="10" letter-spacing="0.3">Cursor natively creates the profile directory structure &#8212; no manual file copying needed</text>
 </svg>

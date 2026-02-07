@@ -23,57 +23,56 @@
   <!-- Title bar -->
   <rect width="960" height="56" rx="12" fill="url(#headerBg)"/>
   <rect y="44" width="960" height="12" fill="url(#headerBg)"/>
-  <text x="480" y="35" text-anchor="middle" fill="#f1f5f9" font-size="18" font-weight="600" letter-spacing="0.5">The Gap: What Cursor Is Missing</text>
+  <text x="480" y="35" text-anchor="middle" fill="#f1f5f9" font-size="18" font-weight="600" letter-spacing="0.5">The Gap: What Cursor Profiles Are Missing</text>
 
   <!-- LEFT: Problem -->
   <rect x="24" y="76" width="444" height="520" rx="10" fill="url(#problemBg)" stroke="#fca5a5" stroke-width="1" filter="url(#shadow)"/>
   <rect x="24" y="76" width="444" height="42" rx="10" fill="#dc2626" opacity="0.9"/>
   <rect x="24" y="108" width="444" height="10" fill="#dc2626" opacity="0.9"/>
-  <text x="246" y="103" text-anchor="middle" fill="#fff" font-size="14" font-weight="600" letter-spacing="0.8">WITHOUT MCP CURSOR PROFILES</text>
+  <text x="246" y="103" text-anchor="middle" fill="#fff" font-size="14" font-weight="600" letter-spacing="0.8">CURSOR PROFILES ALONE</text>
 
   <!-- Problem items -->
   <g transform="translate(48, 140)">
-    <!-- Single config -->
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
     <text x="28" y="37" text-anchor="middle" fill="#dc2626" font-size="14" font-weight="700">1</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Single Configuration Directory</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">~/.cursor and ~/Library/.../Cursor are shared across</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">all projects. One set of extensions, settings, state.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">No Git Identity Isolation</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">Profiles isolate settings and extensions, but all</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">profiles share the same gh CLI account.</text>
   </g>
 
   <g transform="translate(48, 218)">
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
     <text x="28" y="37" text-anchor="middle" fill="#dc2626" font-size="14" font-weight="700">2</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">No Identity Isolation</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">Personal projects, work repos, and client repos all</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">share the same IDE identity and credentials.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Git Credential Conflicts</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">Multiple GitHub accounts fight over which token</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">gets used. Push fails with "permission denied."</text>
   </g>
 
   <g transform="translate(48, 296)">
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
     <text x="28" y="37" text-anchor="middle" fill="#dc2626" font-size="14" font-weight="700">3</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Git Credential Conflicts</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">Multiple GitHub accounts fight over which token</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">gets used. Push fails with "permission denied."</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Manual Account Switching</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">Every context switch requires remembering to run</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">gh auth switch before pushing.</text>
   </g>
 
   <g transform="translate(48, 374)">
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
     <text x="28" y="37" text-anchor="middle" fill="#dc2626" font-size="14" font-weight="700">4</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Manual Directory Juggling</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">Switching contexts means manually renaming dirs,</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">running gh auth switch, hoping nothing breaks.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">No Profile-to-Account Binding</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">No way to say "when I use this profile,</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">automatically use this GitHub account."</text>
   </g>
 
   <!-- Impact callout -->
   <g transform="translate(48, 460)">
     <rect width="396" height="50" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
     <text x="198" y="22" text-anchor="middle" fill="#991b1b" font-size="12" font-weight="600">RESULT</text>
-    <text x="198" y="40" text-anchor="middle" fill="#dc2626" font-size="12">Broken pushes, wrong credentials, wasted time.</text>
+    <text x="198" y="40" text-anchor="middle" fill="#dc2626" font-size="12">Wrong credentials, broken pushes, wasted time.</text>
   </g>
 
   <!-- Arrow in center -->
@@ -86,33 +85,33 @@
   <rect x="492" y="76" width="444" height="520" rx="10" fill="url(#solutionBg)" stroke="#86efac" stroke-width="1" filter="url(#shadow)"/>
   <rect x="492" y="76" width="444" height="42" rx="10" fill="#16a34a" opacity="0.9"/>
   <rect x="492" y="108" width="444" height="10" fill="#16a34a" opacity="0.9"/>
-  <text x="714" y="103" text-anchor="middle" fill="#fff" font-size="14" font-weight="600" letter-spacing="0.8">WITH MCP CURSOR PROFILES</text>
+  <text x="714" y="103" text-anchor="middle" fill="#fff" font-size="14" font-weight="600" letter-spacing="0.8">WITH IDENTITY BINDINGS</text>
 
   <!-- Solution items -->
   <g transform="translate(516, 140)">
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
     <text x="28" y="36" text-anchor="middle" fill="#16a34a" font-size="13" font-weight="700">&#10003;</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Isolated Profile Directories</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">Each profile has its own config, extensions, and state.</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">Symlinks swap the active profile instantly.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Profile = Identity</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">Each Cursor profile is linked to a GitHub account.</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">Switch profile, switch identity. One action.</text>
   </g>
 
   <g transform="translate(516, 218)">
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
     <text x="28" y="36" text-anchor="middle" fill="#16a34a" font-size="13" font-weight="700">&#10003;</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Context-Aware Identity</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">Work, personal, and client contexts are fully separated.</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">Switch profiles, switch identity.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Automatic Credential Switching</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">gh auth switch runs automatically when you switch</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">profiles. No manual steps.</text>
   </g>
 
   <g transform="translate(516, 296)">
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
     <text x="28" y="36" text-anchor="middle" fill="#16a34a" font-size="13" font-weight="700">&#10003;</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Automatic Git Auth Resolution</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">check_git_auth detects mismatches before you push.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Per-Repo Auth Verification</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">check_git_auth catches mismatches before you push.</text>
     <text x="52" y="57" fill="#64748b" font-size="11.5">fix_git_remote makes it permanent per-repo.</text>
   </g>
 
@@ -120,18 +119,18 @@
     <rect width="396" height="64" rx="8" fill="#fff" stroke="#e5e7eb" stroke-width="1" filter="url(#shadow)"/>
     <circle cx="28" cy="32" r="12" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
     <text x="28" y="36" text-anchor="middle" fill="#16a34a" font-size="13" font-weight="700">&#10003;</text>
-    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">One-Command Switching</text>
-    <text x="52" y="44" fill="#64748b" font-size="11.5">switch_profile handles symlinks, validation, and</text>
-    <text x="52" y="57" fill="#64748b" font-size="11.5">launches Cursor — all through natural language.</text>
+    <text x="52" y="24" fill="#1e293b" font-size="13" font-weight="600">Native Cursor Integration</text>
+    <text x="52" y="44" fill="#64748b" font-size="11.5">Profiles appear in Cursor's Settings UI. Uses</text>
+    <text x="52" y="57" fill="#64748b" font-size="11.5">cursor --profile natively. No symlink hacks.</text>
   </g>
 
   <!-- Impact callout -->
   <g transform="translate(516, 460)">
     <rect width="396" height="50" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
     <text x="198" y="22" text-anchor="middle" fill="#166534" font-size="12" font-weight="600">RESULT</text>
-    <text x="198" y="40" text-anchor="middle" fill="#16a34a" font-size="12">Clean separation. Right credentials. Zero friction.</text>
+    <text x="198" y="40" text-anchor="middle" fill="#16a34a" font-size="12">Right credentials, right profile, zero friction.</text>
   </g>
 
   <!-- Footer -->
-  <text x="480" y="610" text-anchor="middle" fill="#94a3b8" font-size="11" letter-spacing="0.3">MCP Cursor Profiles Server — bridging the profile management gap in Cursor IDE</text>
+  <text x="480" y="610" text-anchor="middle" fill="#94a3b8" font-size="11" letter-spacing="0.3">MCP Cursor Profiles &#8212; adding git identity management to Cursor's native profile system</text>
 </svg>

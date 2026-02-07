@@ -1,30 +1,38 @@
-# MCP Cursor Profiles Server
+# MCP Cursor Profiles
 
-An MCP (Model Context Protocol) server for managing multiple Cursor IDE profiles across different platforms.
+An MCP server that integrates with Cursor IDE's native profile system and adds automatic GitHub identity switching.
 
 ## The Problem
 
-Cursor stores all configuration — settings, extensions, keybindings, and MCP servers — in a single set of directories. If you juggle multiple projects, clients, or GitHub identities, there's no built-in way to isolate them. You end up manually swapping configs, fighting git credential conflicts, and hoping you don't push to the wrong repo with the wrong account.
+Cursor stores all configuration in a single set of directories. If you juggle multiple projects, clients, or GitHub identities, there's no built-in way to tie a Cursor profile to a specific GitHub account. You end up manually running `gh auth switch` every time you change context, or worse — pushing to the wrong repo with the wrong account.
 
 ![Gap Analysis](docs/gap-analysis.svg)
 
+## How It Works
+
+This MCP server builds **on top of** Cursor's real profile system — not around it:
+
+- **Cursor profiles** handle settings, extensions, keybindings, snippets, and tasks (managed natively by Cursor)
+- **Identity bindings** link each profile to a GitHub account, so switching profiles automatically switches `gh` credentials
+- **No symlinks, no hacks** — uses `cursor --profile <name>` and Cursor's `storage.json` directly
+
+![Architecture Overview](docs/architecture-overview.svg)
+
 ## Features
 
-- Switch between Cursor profiles seamlessly
-- Create new profiles from current configuration
-- Rename existing profiles
-- List all available profiles with active profile indication
-- Automatic MCP config propagation across profiles
-- Git authentication management across multiple GitHub accounts
+- List Cursor's native profiles with linked GitHub identities
+- Switch profiles and auto-switch GitHub accounts in one step
+- Create new profiles with optional GitHub identity binding
+- Link / unlink GitHub identities to existing profiles
+- Check and fix git remote authentication per-repo
 - Cross-platform support (macOS, Windows, Linux)
-- Safety checks to prevent data corruption while Cursor is running
 
 ## Prerequisites
 
 - Python 3.10 or higher
 - [uv](https://github.com/astral-sh/uv) package manager
 - Cursor IDE installed
-- [gh](https://cli.github.com/) CLI (required for git auth tools)
+- [gh](https://cli.github.com/) CLI (required for git identity features)
 
 ## Installation & Configuration
 
@@ -48,7 +56,7 @@ Then add to your MCP client configuration (Cursor, Claude Desktop, etc.):
 }
 ```
 
-`uv tool install` places the `cursor-profiles-mcp` binary on your PATH (at `~/.local/bin/` by default). No `uvx` needed -- `uvx` resolves from PyPI and this package is not published there.
+`uv tool install` places the `cursor-profiles-mcp` binary on your PATH (at `~/.local/bin/` by default).
 
 > **Note:** If `~/.local/bin` is not on your PATH, use the full path instead:
 >
@@ -60,27 +68,17 @@ Then add to your MCP client configuration (Cursor, Claude Desktop, etc.):
 
 > **Updating:** After pulling new changes, re-run `uv tool install -e .` to pick them up.
 
-### Post-Install: Sync MCP Config
-
-After setting up your MCP servers, run `sync_mcp_config` to copy your `mcp.json` to all profiles. This ensures every profile has access to the same MCP servers -- including `cursor-profiles-mcp` itself, so you can always switch back.
-
-`switch_profile` also auto-injects `cursor-profiles-mcp` into any target profile that's missing it, as a safety net.
-
-## Architecture
-
-![Architecture Overview](docs/architecture-overview.svg)
-
 ## Available Tools
 
 ### Profile Management
 
 #### `show_profiles`
 
-List all available Cursor profiles. The active profile is marked with an asterisk (`*`).
+List all Cursor profiles with their linked GitHub identities. The active profile is marked with an asterisk (`*`).
 
 #### `switch_profile`
 
-Switch to a specific profile and open Cursor. Automatically ensures the target profile has `cursor-profiles-mcp` configured before switching.
+Switch to a Cursor profile and open Cursor. If the profile has a linked GitHub identity, the `gh` account is switched automatically.
 
 ![Profile Switch Workflow](docs/profile-switch-workflow.svg)
 
@@ -90,30 +88,37 @@ Switch to a specific profile and open Cursor. Automatically ensures the target p
 
 #### `init_profile`
 
-Create a new profile from your current Cursor configuration. Copies all settings, extensions, and MCP config.
+Create a new Cursor profile using Cursor's native profile system. Optionally link a GitHub identity at creation time.
 
 ![Profile Init Workflow](docs/profile-init-workflow.svg)
 
-| Parameter      | Type   | Description              |
-| -------------- | ------ | ------------------------ |
-| `profile_name` | string | Name for the new profile |
-
-#### `rename_profile`
-
-Rename an existing profile.
-
-| Parameter  | Type   | Description          |
-| ---------- | ------ | -------------------- |
-| `old_name` | string | Current profile name |
-| `new_name` | string | New profile name     |
+| Parameter         | Type   | Description                                  |
+| ----------------- | ------ | -------------------------------------------- |
+| `profile_name`    | string | Name for the new profile                     |
+| `github_username` | string | GitHub username to link (optional)           |
 
 #### `open_cursor`
 
 Open the Cursor application with the current profile.
 
-#### `sync_mcp_config`
+### Identity Management
 
-Copy the current profile's `mcp.json` to all other profiles. Run this after adding or changing MCP servers to keep all profiles in sync.
+#### `link_identity`
+
+Link a GitHub account to an existing Cursor profile. When you switch to this profile, your `gh` account switches automatically.
+
+| Parameter         | Type   | Description                          |
+| ----------------- | ------ | ------------------------------------ |
+| `profile_name`    | string | Name of the Cursor profile           |
+| `github_username` | string | GitHub username to link              |
+
+#### `unlink_identity`
+
+Remove the GitHub identity link from a Cursor profile.
+
+| Parameter      | Type   | Description                              |
+| -------------- | ------ | ---------------------------------------- |
+| `profile_name` | string | Name of the Cursor profile to unlink     |
 
 ### Git Authentication
 
@@ -135,7 +140,7 @@ Check whether the active `gh` account matches a repository's GitHub remote owner
 
 #### `fix_git_remote`
 
-Embed the GitHub username in a repo's `origin` URL so the `gh` credential helper automatically resolves the correct account -- no manual `gh auth switch` needed.
+Embed the GitHub username in a repo's `origin` URL so the `gh` credential helper automatically resolves the correct account — no manual `gh auth switch` needed.
 
 | Parameter   | Type   | Description                                           |
 | ----------- | ------ | ----------------------------------------------------- |
@@ -150,6 +155,21 @@ Switch the active GitHub account in the `gh` CLI.
 | --------- | ------ | ------------------------------- |
 | `account` | string | GitHub username to switch to    |
 
+## Cursor Profiles vs Identity Bindings
+
+| Feature | Cursor Profiles (native) | Identity Bindings (this tool) |
+| ------- | ------------------------ | ----------------------------- |
+| Settings isolation | Yes | — |
+| Extension isolation | Yes | — |
+| Keybindings per profile | Yes | — |
+| Snippets per profile | Yes | — |
+| Git credential switching | No | Yes |
+| Auto `gh auth switch` | No | Yes |
+| Per-repo auth verification | No | Yes |
+| Visible in Cursor Settings UI | Yes | — |
+
+Identity bindings are stored in `~/.cursor/identities.json` — a simple JSON file mapping profile names to GitHub usernames.
+
 ## Platform Support
 
 | Platform  | Cursor Config Path                     |
@@ -158,54 +178,21 @@ Switch the active GitHub account in the `gh` CLI.
 | Windows   | `%APPDATA%/Cursor`                     |
 | Linux     | `~/.config/Cursor`                     |
 
-## How It Works
-
-1. Creates symlinks from the main Cursor directories to profile-specific directories
-2. Maintains two sets of profiles (Application Support and dotfile versions)
-3. Ensures Cursor is closed before profile operations to prevent data corruption
-4. Automatically detects the correct paths for your operating system
-5. Propagates MCP config across profiles so you never lose access to your tools
-
-### Why MCP Config Propagation Matters
-
-Cursor stores its MCP server configuration in `~/.cursor/mcp.json`. Since `~/.cursor` is a symlink that gets swapped on profile switch, switching to a profile without `mcp.json` would lose **all** MCP servers -- including `cursor-profiles-mcp` itself. This would strand you in a profile with no way to switch back.
-
-To prevent this:
-- `switch_profile` auto-injects `cursor-profiles-mcp` into any target profile missing it
-- `sync_mcp_config` copies your full MCP config to all profiles at once
-
-## Safety Features
-
-- Checks if Cursor is running before profile operations
-- Validates profile names (alphanumeric, hyphens, underscores, dots)
-- Validates profile existence before switching
-- Prevents overwriting existing profiles
-- Maintains symlink integrity
-- Ensures MCP config survives profile switching
-
 ## Troubleshooting
-
-### "Cursor is currently running" error
-
-Quit Cursor completely before using profile management tools.
 
 ### "Profile not found" error
 
-Ensure the profile exists using `show_profiles`.
+Ensure the profile exists using `show_profiles`. Profile names are case-sensitive.
 
-### Permission errors
+### Git push fails with "permission denied"
 
-Make sure the script has read/write access to Cursor directories.
-
-### MCP servers missing after profile switch
-
-Run `sync_mcp_config` from a profile that has the correct `mcp.json`. This copies the config to all other profiles. For future switches, `switch_profile` auto-injects `cursor-profiles-mcp` as a safety net.
+Run `check_git_auth` with the repo path. It will tell you if there's a mismatch between your active `gh` account and the repo owner, and suggest the fix.
 
 ### MCP connection issues
 
 - Ensure `uv` is installed and on your PATH
 - Re-run `uv tool install -e .` from the project directory
-- Verify the binary runs: `cursor-profiles-mcp` (it should block waiting for input -- that's normal, Ctrl+C to exit)
+- Verify the binary runs: `cursor-profiles-mcp` (it should block waiting for input — that's normal, Ctrl+C to exit)
 - If the command is not found, check that `~/.local/bin` is on your PATH or use the full path from `uv tool dir --bin`
 
 ### Python version issues

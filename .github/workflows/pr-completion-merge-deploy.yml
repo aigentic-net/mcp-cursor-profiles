@@ -1,0 +1,39 @@
+name: PR Completion Merge Deploy Gates
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  completion-gate:
+    name: PR Completion Gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Luna Codex handoff contract
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const marker = '## Luna / Codex Handoff';
+            if (!body.includes(marker)) core.setFailed(`Missing required PR contract marker: ${marker}`);
+      - name: Require substantive implementation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const files = await github.rest.pulls.listFiles({ owner: context.repo.owner, repo: context.repo.repo, pull_number: context.payload.pull_request.number });
+            const implementation = files.data.some(file => !file.filename.startsWith('docs/') && !file.filename.includes('luna-pr'));
+            if (!implementation) core.setFailed('PR contains no substantive implementation files');
+  deploy:
+    name: Deployment Hook
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment placeholder
+        run: echo "Deployment hook ready for repository-specific deployment target"

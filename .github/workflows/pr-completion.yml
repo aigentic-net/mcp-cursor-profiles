@@ -1,0 +1,14 @@
+name: PR Completion Gates
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  handoff-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Luna Codex Handoff
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: echo "$PR_BODY" | grep -q "## Luna / Codex Handoff"
